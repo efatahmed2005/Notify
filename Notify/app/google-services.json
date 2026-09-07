@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "193424826218",
+    "project_id": "notifyy-dc3f0",
+    "storage_bucket": "notifyy-dc3f0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193424826218:android:c1a883a7f3234ca7364f13",
+        "android_client_info": {
+          "package_name": "com.example.notify"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoJA9Pg9sdFZ3dinUVmVFhnRW9PG1WRvg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193424826218:android:f2b13465a670375d364f13",
+        "android_client_info": {
+          "package_name": "com.example.notifyy"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoJA9Pg9sdFZ3dinUVmVFhnRW9PG1WRvg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
