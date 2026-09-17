@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notifyy • Real-Time Institutional Notice Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ==========================================
+       AUTH / LOGIN SCREEN VIEW
+       ========================================== -->
+  <div id="authScreen" class="auth-wrapper" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="logo-icon-lg">📢</div>
+        <h2>Notifyy</h2>
+        <span class="auth-tagline">Institutional Notice Broadcast &amp; Management Platform</span>
+      </div>
+
+      <div class="auth-tier-selector">
+        <label>Select Access Tier:</label>
+        <div class="auth-role-tabs" id="authRoleTabs">
+          <button type="button" class="role-tab active" data-role="STUDENT">🎓 Student</button>
+          <button type="button" class="role-tab" data-role="TEACHER">👨‍🏫 Faculty</button>
+          <button type="button" class="role-tab" data-role="DEPT_ADMIN">🏛️ Dept HOD</button>
+          <button type="button" class="role-tab" data-role="ADMIN">🛡️ Admin</button>
+        </div>
+      </div>
+
+      <form id="authLoginForm" class="auth-form">
+        <!-- Assigned Department Selector -->
+        <div class="form-group" id="authDeptGroup">
+          <label for="authDepartment">Assigned Department:</label>
+          <select id="authDepartment" class="custom-select">
+            <option value="CSE" selected>Computer Science &amp; Engineering (CSE)</option>
+            <option value="EEE">Electrical &amp; Electronic Engineering (EEE)</option>
+            <option value="BBA">School of Business Administration (BBA)</option>
+            <option value="LAW">Department of Law &amp; Justice (LAW)</option>
+          </select>
+          <small class="auth-dept-hint" id="authDeptHint">🔒 Department isolation active: Members only see their department notices &amp; campus alerts.</small>
+        </div>
+
+        <div class="form-group">
+          <label for="loginEmail">Institutional Email</label>
+          <input type="email" id="loginEmail" class="form-input" value="student.cse@univ.edu" required>
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" class="form-input" value="password123" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnLoginSubmit">
+          Sign In to Portal
+        </button>
+      </form>
+
+      <div class="auth-demo-helper">
+        <p>💡 <strong>Demo Mode:</strong> Clicking any access tier above automatically sets the verified institutional credentials.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       AUTHENTICATED DASHBOARD VIEW
+       ========================================== -->
+  <div class="app-layout" id="dashboardScreen">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="logo-icon">📢</div>
+          <div class="brand-text">
+            <h2>Notifyy</h2>
+            <span class="badge-role" id="currentRoleBadge">Student Portal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Authenticated Tier Display (Strict RBAC - Read Only) -->
+      <div class="active-tier-card">
+        <span class="tier-caption">AUTHENTICATED ACCESS</span>
+        <div class="tier-badge-row">
+          <span class="tier-pill" id="activeTierPill">🎓 Student</span>
+          <span class="tier-access-tag" id="activeTierAccessTag">Read Only</span>
+        </div>
+        <div class="tier-footnote" id="activeTierFootnote">Role locked to active session. Log out to switch.</div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="nav-menu">
+        <button class="nav-item active" data-filter="all">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Live Notice Board</span>
+          <span class="nav-count" id="totalNoticeCount">5</span>
+        </button>
+        <button class="nav-item" data-filter="my-dept">
+          <span class="nav-icon">🏛️</span>
+          <span class="nav-label">Department Notices</span>
+        </button>
+        <button class="nav-item" data-filter="urgent">
+          <span class="nav-icon">⚠️</span>
+          <span class="nav-label">Urgent Alerts</span>
+          <span class="nav-count badge-urgent" id="urgentCount">1</span>
+        </button>
+        <button class="nav-item" data-filter="exams">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">Exam Routines</span>
+        </button>
+        <button class="nav-item" data-filter="events">
+          <span class="nav-icon">🗓️</span>
+          <span class="nav-label">Events & Seminars</span>
+        </button>
+      </nav>
+
+      <!-- Publisher CTA (Visible for Faculty & Admins) -->
+      <div class="publisher-section" id="publisherSection">
+        <button class="btn btn-primary btn-block" id="btnOpenComposer">
+          <span>+</span> Publish Notice
+        </button>
+      </div>
+
+      <!-- Footer Info & Sign Out -->
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="avatar" id="userAvatar">AS</div>
+          <div class="user-meta">
+            <h4 id="userName">Alex Smith</h4>
+            <p id="userSubtext">CSE • Batch 2024</p>
+          </div>
+          <button class="icon-btn-sm" id="btnSignOutSidebar" title="Sign Out / Switch Account">🚪</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main App Container -->
+    <main class="main-content">
+      
+      <!-- Top App Bar / Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="mobile-toggle" id="btnToggleSidebar" aria-label="Toggle Menu">☰</button>
+          <div class="live-status-pill">
+            <span class="pulse-dot"></span>
+            <span>Zero-Latency Sync Active</span>
+          </div>
+        </div>
+
+        <!-- Global Search -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="globalSearchInput" placeholder="Search notices by title, keyword, course, faculty...">
+          <button class="search-clear" id="btnClearSearch" style="display: none;">✕</button>
+        </div>
+
+        <div class="header-right">
+          <!-- Theme Toggle -->
+          <button class="icon-btn" id="btnThemeToggle" title="Toggle Dark/Light Mode">🌓</button>
+          <!-- Simulation Push Trigger -->
+          <button class="btn btn-secondary btn-sm" id="btnSimulateNotice" title="Simulate an incoming live broadcast">
+            ⚡ Test Live Sync
+          </button>
+          <button class="btn btn-outline btn-sm" id="btnSignOutTop" title="Sign Out">
+            Logout
+          </button>
+        </div>
+      </header>
+
+      <!-- Content View Area -->
+      <div class="content-scroll">
+
+        <!-- Metrics Cards Overview -->
+        <section class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon bg-indigo">📢</div>
+            <div class="metric-info">
+              <h3 id="statTotalNotices">5</h3>
+              <p>Active Broadcasts</p>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon bg-rose">⚠️</div>
+            <div class="metric-info">
+              <h3 id="statUrgentNotices">1</h3>
+              <p>High Priority Alerts</p>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon bg-emerald">🏛️</div>
+            <div class="metric-info">
+              <h3>4</h3>
+              <p>Connected Depts</p>
+            </div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon bg-amber">⚡</div>
+            <div class="metric-info">
+              <h3>&lt; 350ms</h3>
+              <p>Propagation Latency</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Category & Department Filters Bar -->
+        <section class="filters-bar">
+          <div class="category-chips" id="categoryChips">
+            <button class="chip active" data-category="ALL">All Categories</button>
+            <button class="chip" data-category="ANNOUNCEMENT">📢 Announcements</button>
+            <button class="chip" data-category="EXAM">📝 Exam Routines</button>
+            <button class="chip" data-category="URGENT">⚠️ Urgent Alerts</button>
+            <button class="chip" data-category="EVENT">🗓️ Events & Seminars</button>
+          </div>
+
+          <div class="department-filter">
+            <label for="deptSelect">Filter Dept:</label>
+            <select id="deptSelect" class="custom-select select-sm">
+              <option value="ALL">All Departments</option>
+              <option value="CSE">Computer Science (CSE)</option>
+              <option value="EEE">Electrical (EEE)</option>
+              <option value="BBA">Business (BBA)</option>
+              <option value="LAW">Law & Justice (LAW)</option>
+            </select>
+          </div>
+        </section>
+
+        <!-- Notice Feed Grid -->
+        <section class="notices-container" id="noticesContainer">
+          <!-- Dynamically populated by app.js -->
+        </section>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📭</div>
+          <h3>No Announcements Found</h3>
+          <p>There are no broadcasts matching your current filter criteria.</p>
+          <button class="btn btn-outline btn-sm" id="btnResetFilters">Reset Filters</button>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Modal: Notice Composer -->
+  <div class="modal-overlay" id="composerModal" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📢 Broadcast New Institutional Notice</h3>
+        <button class="modal-close" id="btnCloseComposer">✕</button>
+      </div>
+      <form id="noticeComposerForm" class="modal-body">
+        <div class="form-group">
+          <label for="composeCategory">Notice Category:</label>
+          <select id="composeCategory" class="custom-select" required>
+            <option value="ANNOUNCEMENT">📢 General Announcement</option>
+            <option value="EXAM">📝 Exam Schedule / Routine</option>
+            <option value="URGENT">⚠️ Urgent Alert (Emergency)</option>
+            <option value="EVENT">🗓️ Campus Event / Workshop</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="composeDept">Target Department & Audience:</label>
+          <select id="composeDept" class="custom-select" required>
+            <option value="ALL">Campus-Wide (All Faculty & Students)</option>
+            <option value="CSE">Computer Science & Engineering (CSE)</option>
+            <option value="EEE">Electrical & Electronic Engineering (EEE)</option>
+            <option value="BBA">School of Business Administration (BBA)</option>
+            <option value="LAW">Department of Law & Justice (LAW)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="composeTitle">Notice Headline / Title:</label>
+          <input type="text" id="composeTitle" class="form-input" placeholder="e.g. Midterm Routine Spring 2026 Released" required maxlength="120">
+          <small class="char-count"><span id="titleCharCount">0</span>/120</small>
+        </div>
+
+        <div class="form-group">
+          <label for="composeContent">Detailed Announcement Content:</label>
+          <textarea id="composeContent" class="form-textarea" rows="4" placeholder="Provide full details, room numbers, instructions..." required maxlength="600"></textarea>
+          <small class="char-count"><span id="contentCharCount">0</span>/600</small>
+        </div>
+
+        <!-- Document / PDF Attachment Section -->
+        <div class="form-group">
+          <label>Attach Official Document (PDF / DOCX):</label>
+          <div class="file-dropzone" id="fileDropzone">
+            <input type="file" id="composeAttachmentInput" accept=".pdf,.doc,.docx" style="display: none;">
+            <div class="dropzone-content" id="dropzonePrompt">
+              <span class="dropzone-icon">📎</span>
+              <p><strong>Click to browse</strong> or drag & drop institutional document</p>
+              <small>Supported: PDF, DOCX, DOC (Up to 25 MB)</small>
+            </div>
+            <div class="dropzone-selected" id="dropzoneSelected" style="display: none;">
+              <span class="file-icon" id="selectedFileIcon">📄</span>
+              <div class="file-info">
+                <span class="file-name" id="selectedFileName">Notice_Document.pdf</span>
+                <span class="file-size" id="selectedFileSize">1.4 MB</span>
+              </div>
+              <button type="button" class="btn-remove-attachment" id="btnRemoveAttachment" title="Remove attachment">✕</button>
+            </div>
+          </div>
+          <!-- Quick Preset Attachments for instant testing -->
+          <div class="sample-attachments-row">
+            <span class="sample-label">Quick Samples:</span>
+            <button type="button" class="sample-file-btn" data-name="Spring_2026_Final_Exam_Routine.pdf" data-type="PDF" data-size="1.4 MB">📄 Exam Routine (PDF)</button>
+            <button type="button" class="sample-file-btn" data-name="Campus_Electrical_Maintenance_Notice.pdf" data-type="PDF" data-size="890 KB">📄 Circular (PDF)</button>
+            <button type="button" class="sample-file-btn" data-name="Lab_Assessment_Rubric_v2.docx" data-type="DOCX" data-size="420 KB">📝 Lab Rubric (DOCX)</button>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" id="btnCancelCompose">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="btnSubmitNotice">
+            <span>🚀</span> Broadcast to Network
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Notice Details Reader -->
+  <div class="modal-overlay" id="detailsModal" style="display: none;">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <div class="details-badges">
+          <span class="badge" id="modalCategoryBadge">⚠️ Urgent</span>
+          <span class="badge-dept" id="modalDeptBadge">CSE</span>
+        </div>
+        <button class="modal-close" id="btnCloseDetails">✕</button>
+      </div>
+      <div class="modal-body">
+        <h2 id="modalNoticeTitle" class="details-title">Notice Title</h2>
+        <div class="details-meta-box">
+          <div><strong>Published By:</strong> <span id="modalPublisher">Prof. Alan Turing</span></div>
+          <div><strong>Audience:</strong> <span id="modalAudience">Campus-Wide</span></div>
+          <div><strong>Published At:</strong> <span id="modalTimestamp">Just now</span></div>
+        </div>
+        <div class="details-content-body" id="modalNoticeContent">
+          Notice content...
+        </div>
+
+        <!-- Attached Document Display Card -->
+        <div class="details-attachment-card" id="detailsAttachmentCard" style="display: none;">
+          <div class="attachment-left">
+            <div class="attachment-icon-lg" id="modalAttachIcon">📄</div>
+            <div class="attachment-info">
+              <h4 id="modalAttachName">Document_File.pdf</h4>
+              <p id="modalAttachMeta">1.4 MB • Official Institutional Document</p>
+            </div>
+          </div>
+          <div class="attachment-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnOpenDocViewer">
+              👁️ View Fullscreen PDF
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" id="btnDownloadAttachment">
+              ⬇️ Download
+            </button>
+          </div>
+        </div>
+
+        <!-- In-Modal Document Reader Container -->
+        <div class="inmodal-doc-preview" id="inmodalDocPreview" style="display: none;">
+          <div class="inmodal-doc-header">
+            <span>📄 Attached Document Preview</span>
+            <small>Verified Institutional Document</small>
+          </div>
+          <div class="inmodal-doc-body" id="inmodalDocBody">
+            <!-- Rendered preview table or text -->
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" id="btnCopyModalNotice">📋 Copy Text</button>
+        <button class="btn btn-primary" id="btnShareModalNotice">🔗 Share Notice</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: In-App Document / PDF Viewer -->
+  <div class="modal-overlay doc-modal-overlay" id="docViewerModal" style="display: none;">
+    <div class="modal-card modal-large doc-viewer-card">
+      <div class="doc-viewer-header">
+        <div class="doc-viewer-title-group">
+          <span class="doc-type-icon" id="viewerTypeIcon">📄</span>
+          <div>
+            <h3 id="viewerDocTitle">Spring_2026_Final_Exam_Routine.pdf</h3>
+            <span class="doc-status-badge">Official Institutional Notice</span>
+          </div>
+        </div>
+        <div class="doc-viewer-controls">
+          <div class="doc-page-tabs" id="docPageTabs">
+            <button type="button" class="page-tab active" id="btnTabDocPage1">Page 1</button>
+            <button type="button" class="page-tab" id="btnTabDocPage2">Page 2</button>
+          </div>
+          <button class="btn btn-outline btn-sm" id="btnZoomOut" title="Zoom Out">🔍 -</button>
+          <span class="zoom-level" id="zoomLevel">100%</span>
+          <button class="btn btn-outline btn-sm" id="btnZoomIn" title="Zoom In">🔍 +</button>
+          <button class="btn btn-outline btn-sm" id="btnViewerPrint" title="Print Document">🖨️ Print</button>
+          <button class="btn btn-primary btn-sm" id="btnViewerDownload">⬇️ Download PDF</button>
+          <button class="modal-close" id="btnCloseDocViewer">✕</button>
+        </div>
+      </div>
+      <div class="doc-viewer-body" id="docViewerBody">
+        <!-- Native Iframe viewer for real uploaded PDF files -->
+        <iframe id="realPdfIframe" class="real-pdf-viewer-frame" style="display: none; width: 100%; height: 100%; border: none;" title="PDF Preview"></iframe>
+
+        <!-- Authentic Institutional Document Sheet -->
+        <div class="doc-sheet" id="docSheet">
+          <div class="doc-watermark">AUTHENTICATED NOTICE</div>
+          <div class="doc-sheet-header">
+            <div class="doc-crest">🏛️</div>
+            <div class="doc-header-text">
+              <h2>METROPOLITAN UNIVERSITY OF TECHNOLOGY</h2>
+              <p>OFFICE OF THE REGISTRAR &amp; CONTROLLER OF EXAMINATIONS</p>
+              <div class="doc-ref-line">
+                <span id="docViewerRef">Ref: MUT/PUB/2026/0491</span>
+                <span id="docViewerDate">Date: March 17, 2026</span>
+              </div>
+            </div>
+          </div>
+          <div class="doc-divider"></div>
+          <div class="doc-sheet-content">
+            <h3 id="docViewerHeadline">OFFICIAL ACADEMIC NOTICE</h3>
+            <p id="docViewerParagraph" class="doc-paragraph">
+              This document serves as an official institutional announcement broadcasted to all enrolled students and faculty members.
+            </p>
+            <div class="doc-table-wrapper" id="docTableWrapper">
+              <!-- Dynamically populated document schedule / spec table -->
+            </div>
+            <div id="docViewerPage2Content" style="display: none;" class="doc-page2-content">
+              <h4>DOCUMENT REGULATIONS &amp; COMPLIANCE DIRECTIVES</h4>
+              <ol class="doc-rules-list">
+                <li>All enrolled students must present their valid institutional identity card at the examination / session entry point.</li>
+                <li>Late submissions and unauthorized absences will be subject to university senate regulation 4B.</li>
+                <li>For any course registration, room relocation, or admit card discrepancies, contact your department office immediately.</li>
+              </ol>
+            </div>
+          </div>
+          <div class="doc-sheet-footer">
+            <div class="doc-seal">
+              <div class="seal-stamp">OFFICIAL SEAL<br>★ VERIFIED ★</div>
+            </div>
+            <div class="doc-signatures">
+              <div class="sig-line">
+                <span class="sig-cursive" id="docViewerSignee">Dr. Robert Vance</span>
+                <div class="sig-rule"></div>
+                <small id="docViewerDesignation">Controller of Examinations / Registrar</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
