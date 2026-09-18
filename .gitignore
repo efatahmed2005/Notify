@@ -1,15 +1,56 @@
+# ==============================================================================
+# Android & Build Artifacts
+# ==============================================================================
 *.iml
 .gradle
 /local.properties
+local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+.idea/
+.vscode/
 .DS_Store
+Thumbs.db
 /build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+
+# ==============================================================================
+# AI Assistants, Agent Artifacts & Planning Docs (Industry-Standard Exclusion)
+# ==============================================================================
+# Implementation plans, design walkthroughs, task lists, and scratchpads
+implementation_plan.md
+*implementation_plan*
+*implementation-plan*
+walkthrough.md
+*walkthrough*
+*scratchpad*
+*scratch*
+*.prompt
+*.ai
+*.agent
+*ai_signature*
+*ai-signature*
+*.metadata.json
+
+# AI Assistant workspace folders and configuration files
+.gemini/
+.agents/
+.antigravity/
+.cursor/
+.cursorrules
+.windsurfrules
+.clinerules
+.copilot/
+
+# Temporary media storage & task logs
+.tempmediaStorage/
+.user_uploaded/
+scratch/
+*.log
+task-*.log
