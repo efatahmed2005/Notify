@@ -1,27 +1,2 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application dark theme -->
-    <style name="Base.Theme.Notify" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">#818CF8</item>
-        <item name="colorPrimaryVariant">#6366F1</item>
-        <item name="colorOnPrimary">#0F172A</item>
-        <item name="colorPrimaryContainer">#312E81</item>
-        <item name="colorOnPrimaryContainer">#E0E7FF</item>
-
-        <item name="colorSecondary">#34D399</item>
-        <item name="colorSecondaryContainer">#064E3B</item>
-        <item name="colorOnSecondary">#0F172A</item>
-        <item name="colorOnSecondaryContainer">#D1FAE5</item>
-
-        <item name="android:colorBackground">#0F172A</item>
-        <item name="colorSurface">#1E293B</item>
-        <item name="colorOnSurface">#F8FAFC</item>
-        <item name="colorSurfaceVariant">#334155</item>
-        <item name="colorOutline">#475569</item>
-        <item name="colorOutlineVariant">#334155</item>
-
-        <item name="android:statusBarColor">#0F172A</item>
-        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
-        <item name="android:navigationBarColor">#1E293B</item>
-    </style>
-</resources>
+<resources />

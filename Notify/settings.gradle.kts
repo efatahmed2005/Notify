@@ -24,4 +24,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "Notify"
 include(":app")
- 
+// This historical duplicate contains the retired client-side role selector.
+// Prevent accidentally packaging it instead of the maintained server-backed app.
+throw GradleException("This archived Android project is retired. Open the repository root (one directory above) to build Notify.")
+

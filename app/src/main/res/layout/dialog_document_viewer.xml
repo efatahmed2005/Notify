@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:layout_margin="16dp"
     app:cardBackgroundColor="@color/surface"
-    app:cardCornerRadius="20dp"
+    app:cardCornerRadius="6dp"
     app:cardElevation="10dp"
     app:strokeColor="@color/outline_variant"
     app:strokeWidth="1dp">
@@ -46,7 +46,7 @@
                     android:layout_height="wrap_content"
                     android:ellipsize="middle"
                     android:singleLine="true"
-                    android:text="Notice_Attachment.pdf"
+                    android:text=""
                     android:textColor="@color/on_surface"
                     android:textSize="15sp"
                     android:textStyle="bold" />
@@ -55,7 +55,7 @@
                     android:id="@+id/tvDialogDocMeta"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="1.4 MB • Official In-App Document Preview"
+                    android:text=""
                     android:textColor="@color/on_surface_variant"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -86,7 +86,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="8dp"
+                app:cardCornerRadius="6dp"
                 app:cardElevation="3dp">
 
                 <LinearLayout
@@ -105,7 +105,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="🏛️"
+                            android:text=""
                             android:textSize="32sp" />
 
                         <TextView
@@ -114,7 +114,7 @@
                             android:layout_marginTop="4dp"
                             android:gravity="center"
                             android:letterSpacing="0.05"
-                            android:text="METROPOLITAN UNIVERSITY OF TECHNOLOGY"
+                            android:text="Attached document"
                             android:textColor="#1E293B"
                             android:textSize="13sp"
                             android:textStyle="bold" />
@@ -123,7 +123,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:gravity="center"
-                            android:text="OFFICE OF THE REGISTRAR &amp; CONTROLLER OF EXAMS"
+                            android:text=""
                             android:textColor="#64748B"
                             android:textSize="10sp"
                             android:textStyle="bold" />
@@ -133,7 +133,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:text="Ref: MUT/NOT/2026/0491 • Authenticated Notice"
+                            android:text=""
                             android:textColor="#475569"
                             android:textSize="10sp" />
                     </LinearLayout>
@@ -142,7 +142,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="2dp"
                         android:layout_marginVertical="14dp"
-                        android:background="#4F46E5" />
+                        android:background="#245B52" />
 
                     <!-- Notice Document Content Headline -->
                     <TextView
@@ -150,7 +150,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:text="OFFICIAL ACADEMIC NOTICE"
+                        android:text=""
                         android:textColor="#0F172A"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -162,7 +162,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:lineSpacingMultiplier="1.3"
-                        android:text="Detailed document specification and official institutional routine terms."
+                        android:text=""
                         android:textColor="#334155"
                         android:textSize="12sp" />
 
@@ -180,7 +180,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="★ VERIFIED INSTITUTIONAL DOCUMENT ★"
+                            android:text=""
                             android:textColor="@color/badge_urgent"
                             android:textSize="10sp"
                             android:textStyle="bold" />
@@ -199,7 +199,7 @@
                             android:id="@+id/tvDialogSignee"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Dr. Robert Vance"
+                            android:text=""
                             android:textColor="#1E40AF"
                             android:textSize="13sp"
                             android:textStyle="italic|bold" />
@@ -208,12 +208,12 @@
                             android:layout_width="120dp"
                             android:layout_height="1dp"
                             android:layout_marginVertical="2dp"
-                            android:background="#94A3B8" />
+                            android:background="#617074" />
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Authorized Signatory"
+                            android:text=""
                             android:textColor="#64748B"
                             android:textSize="9sp" />
                     </LinearLayout>
@@ -244,7 +244,7 @@
                 android:layout_marginEnd="10dp"
                 android:text="Close"
                 android:textColor="@color/on_surface"
-                app:cornerRadius="10dp"
+                app:cornerRadius="6dp"
                 app:strokeColor="@color/outline" />
 
             <com.google.android.material.button.MaterialButton
@@ -255,7 +255,7 @@
                 android:backgroundTint="@color/primary"
                 android:text="Download PDF"
                 android:textColor="@color/on_primary"
-                app:cornerRadius="10dp"
+                app:cornerRadius="6dp"
                 app:icon="@drawable/ic_pdf"
                 app:iconTint="@color/on_primary" />
         </LinearLayout>

@@ -1,10 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
-    id("com.google.gms.google-services")
 }
 
 android {
     namespace = "com.example.notify"
+    buildFeatures { buildConfig = true }
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -17,6 +17,13 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+
+        val notifyUrl = providers.gradleProperty("NOTIFY_SERVER_URL").orElse("https://notify.example.invalid").get().trimEnd('/')
+        val notifyOrigin = providers.gradleProperty("NOTIFY_SERVER_ORIGIN").orElse(notifyUrl).get().trimEnd('/')
+        require(notifyUrl.matches(Regex("https?://[A-Za-z0-9.:-]+"))) { "NOTIFY_SERVER_URL must be an HTTP(S) origin without a path" }
+        require(notifyOrigin.matches(Regex("https?://[A-Za-z0-9.:-]+"))) { "NOTIFY_SERVER_ORIGIN must be an HTTP(S) origin without a path" }
+        buildConfigField("String", "NOTIFY_SERVER_URL", "\"$notifyUrl\"")
+        buildConfigField("String", "NOTIFY_SERVER_ORIGIN", "\"$notifyOrigin\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -44,7 +51,4 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-    implementation(platform ("com.google.firebase:firebase-bom:34.14.0"))
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database:21.0.0")
 }

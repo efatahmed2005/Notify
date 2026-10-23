@@ -41,17 +41,17 @@ public class UiHelper {
     }
 
     public static String getCategoryLabel(Notice.Category category) {
-        if (category == null) return "📢 Announcement";
+        if (category == null) return " Announcement";
         switch (category) {
             case URGENT:
-                return "⚠️ Urgent Alert";
+                return " Urgent Alert";
             case EXAM:
-                return "📝 Examination";
+                return " Examination";
             case EVENT:
-                return "🗓️ Campus Event";
+                return " Campus Event";
             case ANNOUNCEMENT:
             default:
-                return "📢 Announcement";
+                return " Announcement";
         }
     }
 
@@ -66,11 +66,11 @@ public class UiHelper {
     }
 
     public static void shareNotice(Context context, Notice notice) {
-        String shareBody = "📢 *" + notice.getTitle() + "*\n\n" +
+        String shareBody = " *" + notice.getTitle() + "*\n\n" +
                 notice.getContent() + "\n\n" +
                 "Target: " + notice.getTargetAudience() + " (" + notice.getTargetDepartment() + ")\n" +
                 "Published by: " + notice.getPublisherName() + "\n" +
-                "Via Notifyy Institutional Portal";
+                "Via Notify Institutional Portal";
 
         Intent sharingIntent = new Intent(Intent.ACTION_SEND);
         sharingIntent.setType("text/plain");

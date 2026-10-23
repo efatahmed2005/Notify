@@ -1,0 +1,27 @@
+{
+  "name": "notify-university",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "setup:admin": "node --env-file-if-exists=.env server/setup.js",
+    "recover:admin": "node --env-file-if-exists=.env server/setup.js --recover",
+    "test": "node --test server/test/*.test.js",
+    "check": "node --check server/app.js && node --check web/app.js && node --check web/auth.js && node --check web/manage.js",
+    "test:browser": "node test/browser.test.js"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0",
+    "multer": "^2.5.0",
+    "nodemailer": "^10.2.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

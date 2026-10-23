@@ -35,7 +35,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Broadcast Notice"
+                android:text="Save notice"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:textColor="@color/on_surface"
@@ -78,7 +78,7 @@
                     style="@style/Widget.Notify.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📢 Announcement"
+                    android:text=" Announcement"
                     android:checked="true" />
 
                 <com.google.android.material.chip.Chip
@@ -86,21 +86,21 @@
                     style="@style/Widget.Notify.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📝 Exam Routine" />
+                    android:text=" Exam Routine" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipUrgent"
                     style="@style/Widget.Notify.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚠️ Urgent Alert" />
+                    android:text=" Urgent Alert" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipEvent"
                     style="@style/Widget.Notify.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🗓️ Event / Seminar" />
+                    android:text=" Event / Seminar" />
             </com.google.android.material.chip.ChipGroup>
 
             <!-- Target Audience Dropdown -->
@@ -193,8 +193,8 @@
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:text="📎 Select PDF / Document"
-                    app:cornerRadius="10dp"
+                    android:text=" Select PDF / Document"
+                    app:cornerRadius="6dp"
                     android:textColor="@color/primary"
                     app:strokeColor="@color/outline" />
 
@@ -223,7 +223,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Routine_Spring_2026.pdf (1.4 MB)"
+                        android:text=""
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/on_surface"
@@ -240,15 +240,20 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <com.google.android.material.checkbox.MaterialCheckBox
+                android:id="@+id/cbSaveDraft"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Save as draft (visible only to you and the admin)" />
             <!-- Publish Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSend"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:text="Broadcast Notice"
+                android:text="Save notice"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                app:cornerRadius="14dp"
+                app:cornerRadius="6dp"
                 android:backgroundTint="@color/primary"
                 android:textColor="@color/on_primary"
                 app:icon="@drawable/ic_send"

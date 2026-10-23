@@ -54,3 +54,14 @@ walkthrough.md
 scratch/
 *.log
 task-*.log
+
+# Local validation tools and captures
+.temp/
+node_modules/
+.env
+.env.*
+!.env.example
+var/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

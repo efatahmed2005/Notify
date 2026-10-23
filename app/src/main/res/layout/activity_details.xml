@@ -79,7 +79,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_badge_urgent"
-                    android:text="⚠️ Urgent Alert"
+                    android:text=""
                     android:textSize="12sp"
                     android:textStyle="bold"
                     android:textColor="@color/badge_urgent_text"
@@ -90,7 +90,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_badge_announcement"
-                    android:text="CSE Dept"
+                    android:text=""
                     android:textSize="12sp"
                     android:textColor="@color/badge_announcement_text" />
             </LinearLayout>
@@ -100,7 +100,7 @@
                 android:id="@+id/tvDetailsTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Spring 2026 Final Examination Routine Released"
+                android:text=""
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/on_surface"
@@ -111,7 +111,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="12dp"
+                app:cardCornerRadius="6dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/outline_variant"
@@ -128,7 +128,7 @@
                         android:id="@+id/tvDetailsPublisher"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Published by: Office of the Controller of Exams"
+                        android:text=""
                         android:textSize="13sp"
                         android:textStyle="bold"
                         android:textColor="@color/on_surface" />
@@ -137,7 +137,7 @@
                         android:id="@+id/tvDetailsTarget"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Target: Campus-Wide (All Departments)"
+                        android:text=""
                         android:textSize="12sp"
                         android:textColor="@color/on_surface_medium"
                         android:layout_marginTop="2dp" />
@@ -146,7 +146,7 @@
                         android:id="@+id/tvDetailsTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="May 26, 2026 • 09:00 PM"
+                        android:text=""
                         android:textSize="12sp"
                         android:textColor="@color/on_surface_subtle"
                         android:layout_marginTop="2dp" />
@@ -158,7 +158,7 @@
                 android:id="@+id/tvDetailsDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Detailed announcement content appears here..."
+                android:text=""
                 android:textSize="16sp"
                 android:textColor="@color/on_surface_medium"
                 android:lineSpacingMultiplier="1.4"
@@ -169,7 +169,7 @@
                 android:id="@+id/cardDetailsAttachment"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="14dp"
+                app:cardCornerRadius="6dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/outline_variant"
@@ -200,7 +200,7 @@
                             android:id="@+id/tvDetailsAttachmentName"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Official_Routine_2026.pdf"
+                            android:text=""
                             android:textSize="14sp"
                             android:textStyle="bold"
                             android:textColor="@color/on_surface" />
@@ -209,7 +209,7 @@
                             android:id="@+id/tvDetailsAttachmentSize"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="1.4 MB • PDF Document"
+                            android:text=""
                             android:textSize="12sp"
                             android:textColor="@color/on_surface_subtle"
                             android:layout_marginTop="2dp" />
@@ -221,7 +221,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Open"
-                        app:cornerRadius="10dp" />
+                        app:cornerRadius="6dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -239,7 +239,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
                     android:text="Copy Text"
-                    app:cornerRadius="12dp"
+                    app:cornerRadius="6dp"
                     app:icon="@drawable/ic_copy"
                     app:iconTint="@color/primary"
                     android:textColor="@color/primary" />
@@ -251,7 +251,7 @@
                     android:layout_weight="1"
                     android:layout_marginStart="6dp"
                     android:text="Share Notice"
-                    app:cornerRadius="12dp"
+                    app:cornerRadius="6dp"
                     android:backgroundTint="@color/primary"
                     app:icon="@drawable/ic_share"
                     app:iconTint="@color/on_primary"

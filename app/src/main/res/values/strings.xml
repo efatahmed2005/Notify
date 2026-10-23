@@ -1,30 +1,28 @@
 <resources>
-    <string name="app_name">Notifyy</string>
+    <string name="app_name">Notify</string>
     <string name="app_tagline">Institutional Notice Broadcast System</string>
     <string name="role_select_title">Select Your Role</string>
-    <string name="role_select_subtitle">Choose your access tier to enter the portal</string>
+    <string name="role_select_subtitle">Sign in with your university account</string>
 
     <!-- Roles -->
     <string name="role_admin">University Admin</string>
     <string name="role_admin_desc">Campus-wide emergency &amp; general notices</string>
-    <string name="role_dept_admin">Department HOD</string>
-    <string name="role_dept_admin_desc">Department broadcast &amp; faculty management</string>
     <string name="role_teacher">Faculty / Teacher</string>
     <string name="role_teacher_desc">Course notices, schedules &amp; assignments</string>
     <string name="role_student">Student</string>
-    <string name="role_student_desc">Live personalized notice bulletin</string>
+    <string name="role_student_desc">Department notice board</string>
 
     <!-- Actions & Labels -->
     <string name="action_login">Enter Dashboard</string>
     <string name="action_register">Create Account</string>
-    <string name="action_publish">Broadcast Notice</string>
+    <string name="action_publish">Save notice</string>
     <string name="action_copy">Copy Content</string>
     <string name="action_share">Share Notice</string>
-    <string name="status_live">🟢 Live Sync Active</string>
+    <string name="status_live"> Connected account</string>
     <string name="search_notices_hint">Search notices by title, keyword...</string>
     <string name="category_all">All</string>
-    <string name="category_announcement">📢 Announcement</string>
-    <string name="category_exam">📝 Exam</string>
-    <string name="category_urgent">⚠️ Urgent</string>
-    <string name="category_event">🗓️ Event</string>
+    <string name="category_announcement"> Announcement</string>
+    <string name="category_exam"> Exam</string>
+    <string name="category_urgent"> Urgent</string>
+    <string name="category_event"> Event</string>
 </resources>

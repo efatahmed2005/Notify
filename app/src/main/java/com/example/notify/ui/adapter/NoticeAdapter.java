@@ -58,7 +58,7 @@ public class NoticeAdapter extends RecyclerView.Adapter<NoticeAdapter.NoticeView
         holder.tvContent.setText(notice.getContent());
         holder.tvPublisher.setText(notice.getPublisherName());
         holder.tvTimestamp.setText(DateUtils.getRelativeTimeSpanString(notice.getTimestamp()));
-        holder.tvAudience.setText("Audience: " + notice.getTargetAudience());
+        holder.tvAudience.setText(notice.getTargetAudience() + " - " + notice.getPublicationStatus());
 
         // Category Badge
         holder.tvCategoryBadge.setText(UiHelper.getCategoryLabel(notice.getCategory()));
@@ -66,7 +66,7 @@ public class NoticeAdapter extends RecyclerView.Adapter<NoticeAdapter.NoticeView
         holder.tvCategoryBadge.setTextColor(UiHelper.getCategoryTextColor(context, notice.getCategory()));
 
         // Department Badge
-        String deptText = "ALL".equalsIgnoreCase(notice.getTargetDepartment()) ? "Campus" : notice.getTargetDepartment();
+        String deptText = "ALL".equalsIgnoreCase(notice.getTargetDepartment()) ? "Campus" : notice.getTargetAudience();
         holder.tvDeptBadge.setText(deptText);
 
         // Attachment View

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Brand & Accent Colors -->
-    <color name="primary">#4F46E5</color>
-    <color name="primary_dark">#4338CA</color>
-    <color name="primary_light">#EEF2FF</color>
-    <color name="primary_container">#E0E7FF</color>
+    <color name="primary">#245B52</color>
+    <color name="primary_dark">#19473F</color>
+    <color name="primary_light">#EDF4F0</color>
+    <color name="primary_container">#DAE9E2</color>
     <color name="on_primary">#FFFFFF</color>
-    <color name="on_primary_container">#312E81</color>
+    <color name="on_primary_container">#173B45</color>
 
     <color name="secondary">#10B981</color>
     <color name="secondary_container">#D1FAE5</color>
@@ -18,9 +18,9 @@
     <color name="badge_urgent_bg">#FEE2E2</color>
     <color name="badge_urgent_text">#991B1B</color>
 
-    <color name="badge_exam">#8B5CF6</color>
-    <color name="badge_exam_bg">#EDE9FE</color>
-    <color name="badge_exam_text">#5B21B6</color>
+    <color name="badge_exam">#356777</color>
+    <color name="badge_exam_bg">#E7F0F3</color>
+    <color name="badge_exam_text">#274E5A</color>
 
     <color name="badge_event">#F59E0B</color>
     <color name="badge_event_bg">#FEF3C7</color>
@@ -40,7 +40,7 @@
     <color name="on_surface">#0F172A</color>
     <color name="on_surface_variant">#64748B</color>
     <color name="on_surface_medium">#475569</color>
-    <color name="on_surface_subtle">#94A3B8</color>
+    <color name="on_surface_subtle">#617074</color>
     <color name="outline">#CBD5E1</color>
     <color name="outline_variant">#E2E8F0</color>
 

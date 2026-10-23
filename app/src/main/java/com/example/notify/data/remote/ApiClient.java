@@ -1,0 +1,246 @@
+package com.example.notify.data.remote;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.webkit.CookieManager;
+import com.example.notify.BuildConfig;
+import com.example.notify.data.model.User;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+/** Shared transport. Identity and permissions always come from the server. */
+public final class ApiClient {
+
+  public interface Callback<T> {
+    void success(T value);
+    void error(Exception error);
+  }
+
+  public interface Work<T> {
+    T run() throws Exception;
+  }
+
+  private static final ExecutorService executor = Executors.newFixedThreadPool(
+    3
+  );
+  private static final Handler main = new Handler(Looper.getMainLooper());
+  public static volatile User currentUser;
+  private static volatile String csrf = "";
+
+  public static String baseUrl() {
+    return BuildConfig.NOTIFY_SERVER_URL.replaceAll("/+$", "");
+  }
+
+  public static <T> void async(Work<T> work, Callback<T> callback) {
+    executor.execute(() -> {
+      try {
+        T value = work.run();
+        main.post(() -> callback.success(value));
+      } catch (Exception e) {
+        main.post(() -> callback.error(e));
+      }
+    });
+  }
+
+  private static HttpURLConnection connection(
+    String path,
+    String method,
+    String type
+  ) throws Exception {
+    URL base = new URL(baseUrl());
+    if (
+      !"https".equals(base.getProtocol()) &&
+      !(
+        BuildConfig.DEBUG &&
+        ("10.0.2.2".equals(base.getHost()) ||
+          "localhost".equals(base.getHost()) ||
+          "127.0.0.1".equals(base.getHost()))
+      )
+    ) throw new IOException("Configure an HTTPS Notify server.");
+    if (!path.startsWith("/api/")) throw new IOException("Invalid API path");
+    HttpURLConnection c = (HttpURLConnection) new URL(
+      baseUrl() + path
+    ).openConnection();
+    c.setInstanceFollowRedirects(false);
+    c.setConnectTimeout(15000);
+    c.setReadTimeout(30000);
+    c.setRequestMethod(method);
+    c.setRequestProperty("Origin", BuildConfig.NOTIFY_SERVER_ORIGIN);
+    String cookies = CookieManager.getInstance().getCookie(baseUrl());
+    if (cookies != null) c.setRequestProperty("Cookie", cookies);
+    c.setRequestProperty("X-CSRF-Token", csrf);
+    c.setRequestProperty("Accept", "application/json");
+    if (type != null) c.setRequestProperty("Content-Type", type);
+    return c;
+  }
+
+  private static byte[] response(HttpURLConnection c) throws Exception {
+    try {
+      int code = c.getResponseCode();
+      InputStream stream =
+        code >= 400 ? c.getErrorStream() : c.getInputStream();
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+      if (stream != null) try (InputStream input = stream) {
+        byte[] buffer = new byte[16384];
+        int count;
+        while ((count = input.read(buffer)) != -1) {
+          if (output.size() + count > 27 * 1024 * 1024) throw new IOException(
+            "Response is too large."
+          );
+          output.write(buffer, 0, count);
+        }
+      }
+      byte[] bytes = output.toByteArray();
+      if (code < 200 || code >= 300) {
+        if (code == 401) {
+          currentUser = null;
+          csrf = "";
+        }
+        String message = "The request could not be completed.";
+        try {
+          message = new JSONObject(
+            new String(bytes, StandardCharsets.UTF_8)
+          ).optString("error", message);
+        } catch (Exception ignored) {}
+        throw new IOException(message);
+      }
+      return bytes;
+    } finally {
+      c.disconnect();
+    }
+  }
+
+  public static String request(String path, String method, JSONObject body)
+    throws Exception {
+    if (!"GET".equals(method)) refreshSession();
+    HttpURLConnection c = connection(
+      path,
+      method,
+      body == null ? null : "application/json"
+    );
+    if (body != null) {
+      c.setDoOutput(true);
+      try (OutputStream out = c.getOutputStream()) {
+        out.write(body.toString().getBytes(StandardCharsets.UTF_8));
+      }
+    }
+    return new String(response(c), StandardCharsets.UTF_8);
+  }
+
+  public static synchronized User refreshSession() throws Exception {
+    JSONObject data = new JSONObject(
+      new String(
+        response(connection("/api/session", "GET", null)),
+        StandardCharsets.UTF_8
+      )
+    );
+    csrf = data.getString("csrfToken");
+    currentUser = User.fromJson(data.getJSONObject("user"));
+    return currentUser;
+  }
+
+  public static JSONObject publish(JSONObject fields, File file, String name)
+    throws Exception {
+    refreshSession();
+    String boundary = "Notify" + java.util.UUID.randomUUID();
+    HttpURLConnection c = connection(
+      "/api/notices",
+      "POST",
+      "multipart/form-data; boundary=" + boundary
+    );
+    c.setDoOutput(true);
+    c.setChunkedStreamingMode(16384);
+    try (OutputStream out = c.getOutputStream()) {
+      java.util.Iterator<String> keys = fields.keys();
+      while (keys.hasNext()) {
+        String key = keys.next();
+        out.write(
+          (
+            "--" +
+            boundary +
+            "\r\nContent-Disposition: form-data; name=\"" +
+            key +
+            "\"\r\n\r\n" +
+            fields.getString(key) +
+            "\r\n"
+          ).getBytes(StandardCharsets.UTF_8)
+        );
+      }
+      if (file != null) {
+        if (file.length() > 25 * 1024 * 1024) throw new IOException(
+          "Attachments must be 25 MB or smaller."
+        );
+        String safe = name.replaceAll("[^a-zA-Z0-9._ -]", "_");
+        out.write(
+          (
+            "--" +
+            boundary +
+            "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" +
+            safe +
+            "\"\r\nContent-Type: application/octet-stream\r\n\r\n"
+          ).getBytes(StandardCharsets.UTF_8)
+        );
+        try (InputStream input = new FileInputStream(file)) {
+          byte[] buffer = new byte[16384];
+          int count;
+          while ((count = input.read(buffer)) != -1)
+            out.write(buffer, 0, count);
+        }
+        out.write("\r\n".getBytes(StandardCharsets.UTF_8));
+      }
+      out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+    }
+    return new JSONObject(new String(response(c), StandardCharsets.UTF_8));
+  }
+
+  public static File download(Context context, String noticeId, String name)
+    throws Exception {
+    byte[] data = response(
+      connection("/api/notices/" + noticeId + "/attachment", "GET", null)
+    );
+    File file = File.createTempFile(
+      "notice-",
+      "-" + name.replaceAll("[^a-zA-Z0-9._-]", "_"),
+      context.getCacheDir()
+    );
+    try (OutputStream out = new FileOutputStream(file)) {
+      out.write(data);
+    }
+    return file;
+  }
+
+  public static void logout(Context context, Runnable complete) {
+    async(
+      () -> {
+        try {
+          request("/api/auth/logout", "POST", new JSONObject());
+        } finally {
+          currentUser = null;
+          csrf = "";
+        }
+        return true;
+      },
+      new Callback<Boolean>() {
+        public void success(Boolean value) {
+          CookieManager.getInstance().removeAllCookies(v -> complete.run());
+        }
+
+        public void error(Exception e) {
+          android.widget.Toast.makeText(
+            context,
+            "Server sign-out could not be confirmed. Local credentials were cleared.",
+            android.widget.Toast.LENGTH_LONG
+          ).show();
+          CookieManager.getInstance().removeAllCookies(v -> complete.run());
+        }
+      }
+    );
+  }
+}

@@ -55,7 +55,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Join Notifyy Network"
+                android:text="Join Notify Network"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:textColor="@color/on_surface" />
@@ -159,7 +159,7 @@
                 android:text="Sign Up Account"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                app:cornerRadius="14dp"
+                app:cornerRadius="6dp"
                 android:backgroundTint="@color/primary"
                 android:textColor="@color/on_primary" />
 

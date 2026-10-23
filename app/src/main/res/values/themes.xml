@@ -2,6 +2,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme with Material 3 DayNight -->
     <style name="Base.Theme.Notify" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Notify</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Notify</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Notify</item>
+        <item name="materialButtonStyle">@style/Widget.Notify.Button</item>
+        <item name="extendedFloatingActionButtonStyle">@style/Widget.Notify.ExtendedButton</item>
         <!-- Primary brand colors -->
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryVariant">@color/primary_dark</item>
@@ -32,7 +37,7 @@
 
     <!-- Custom View Styles -->
     <style name="Widget.Notify.Card.Elevated" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">16dp</item>
+        <item name="cardCornerRadius">8dp</item>
         <item name="cardElevation">2dp</item>
         <item name="strokeColor">@color/outline_variant</item>
         <item name="strokeWidth">1dp</item>
@@ -40,7 +45,10 @@
     </style>
 
     <style name="Widget.Notify.Chip.Choice" parent="Widget.Material3.Chip.Filter">
-        <item name="chipCornerRadius">20dp</item>
+        <item name="chipCornerRadius">4dp</item>
         <item name="chipStrokeWidth">1dp</item>
     </style>
+<style name="ShapeAppearance.Notify" parent="ShapeAppearance.Material3.Corner.Small"><item name="cornerSize">6dp</item></style>
+<style name="Widget.Notify.Button" parent="Widget.Material3.Button"><item name="cornerRadius">6dp</item></style>
+    <style name="Widget.Notify.ExtendedButton" parent="Widget.Material3.ExtendedFloatingActionButton.Primary"><item name="shapeAppearance">@style/ShapeAppearance.Notify</item><item name="elevation">0dp</item></style>
 </resources>

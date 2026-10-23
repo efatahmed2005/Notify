@@ -6,7 +6,7 @@ import java.util.List;
 
 /**
  * NoticeRepository defines standard CRUD and real-time observation methods.
- * Implementations can be MockNoticeRepository, FirebaseNoticeRepository, or RestNoticeRepository.
+ * RestNoticeRepository delegates all access decisions to the shared server.
  */
 public interface NoticeRepository {
 

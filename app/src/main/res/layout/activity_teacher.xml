@@ -59,7 +59,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Prof. Alan Turing • CSE Dept"
+                        android:text="University notice board"
                         android:textSize="11sp"
                         android:textColor="@color/on_surface_subtle" />
                 </LinearLayout>
@@ -79,7 +79,7 @@
                         android:text="+ Notice"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        app:cornerRadius="18dp"
+                        app:cornerRadius="6dp"
                         android:backgroundTint="@color/primary"
                         android:paddingHorizontal="12dp"
                         android:paddingVertical="0dp" />
@@ -109,7 +109,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="6dp"
-                    app:cardCornerRadius="12dp"
+                    app:cardCornerRadius="6dp"
                     app:cardElevation="0dp"
                     app:strokeWidth="1dp"
                     app:strokeColor="@color/outline_variant"
@@ -125,7 +125,7 @@
                             android:id="@+id/tvActiveNoticesCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="5"
+                            android:text="0"
                             android:textSize="20sp"
                             android:textStyle="bold"
                             android:textColor="@color/primary" />
@@ -139,39 +139,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="6dp"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/outline_variant"
-                    app:cardBackgroundColor="@color/surface_variant">
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="3"
-                            android:textSize="20sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/secondary" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Enrolled Courses"
-                            android:textSize="11sp"
-                            android:textColor="@color/on_surface_subtle" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
 
         </LinearLayout>

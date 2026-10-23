@@ -88,7 +88,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Live"
+                        android:text="Notices"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/live_green" />
@@ -112,7 +112,7 @@
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
-                app:cardCornerRadius="22dp"
+                app:cardCornerRadius="6dp"
                 app:cardElevation="0dp"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/outline_variant"
@@ -197,7 +197,7 @@
                         android:id="@+id/tvNoticeCountBadge"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="5 Notices"
+                        android:text="0 Notices"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary" />
@@ -252,7 +252,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="There are no broadcasts matching your current filter criteria."
+                android:text="No notices match this view. Try another search or category."
                 android:textSize="13sp"
                 android:textColor="@color/on_surface_subtle"
                 android:gravity="center"

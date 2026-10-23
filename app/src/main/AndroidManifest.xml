@@ -2,17 +2,20 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:icon="@mipmap/ic_launcher"
-        android:label="Notifyy"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@drawable/ic_launcher_foreground"
+        android:label="Notify"
+        android:roundIcon="@drawable/ic_launcher_foreground"
         android:supportsRtl="true"
         android:theme="@style/Theme.Notify"
         tools:targetApi="31">
 
-        <!-- Main Launcher & Role Selector -->
+        <!-- Account portal and native navigation -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -22,12 +25,9 @@
             </intent-filter>
         </activity>
 
-        <!-- 4-Tier Role Dashboards -->
+        <!-- Authenticated native dashboards -->
         <activity
             android:name=".ui.admin.AdminDashboardActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.deptadmin.DeptAdminDashboardActivity"
             android:exported="false" />
         <activity
             android:name=".ui.teacher.TeacherDashboardActivity"
@@ -50,19 +50,6 @@
             android:name=".ui.auth.RegisterActivity"
             android:exported="false" />
 
-        <!-- Legacy Activity Compatibility Entries -->
-        <activity
-            android:name=".TeacherActivity"
-            android:exported="false" />
-        <activity
-            android:name=".StudentActivity"
-            android:exported="false" />
-        <activity
-            android:name=".CreateNotificationActivity"
-            android:exported="false" />
-        <activity
-            android:name=".activity_details"
-            android:exported="false" />
         <!-- FileProvider for secure PDF and document viewing/sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"
