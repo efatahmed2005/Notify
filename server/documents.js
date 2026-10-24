@@ -27,7 +27,6 @@ export async function processDocument(db, file, env = process.env) {
     const repoRoot = fileURLToPath(new URL("../", import.meta.url));
     const localPython = join(repoRoot, "var/document-tools/python/Scripts/python.exe");
     const localLibreOffice = join(repoRoot, "var/document-tools/libreoffice/program/soffice.exe");
-    const localTessdata = join(repoRoot, "var/document-tools/tessdata");
 
     const pythonBin = (env.DOCUMENT_PYTHON && existsSync(env.DOCUMENT_PYTHON))
       ? env.DOCUMENT_PYTHON
@@ -37,16 +36,10 @@ export async function processDocument(db, file, env = process.env) {
       ? env.LIBREOFFICE_PATH
       : (existsSync(localLibreOffice) ? localLibreOffice : undefined);
 
-    const tessPath = (env.TESSDATA_PREFIX && existsSync(env.TESSDATA_PREFIX))
-      ? env.TESSDATA_PREFIX
-      : (existsSync(localTessdata) ? localTessdata : undefined);
-
     const runEnv = {
       ...env,
       DOCUMENT_PYTHON: pythonBin,
       ...(librePath ? { LIBREOFFICE_PATH: librePath } : {}),
-      ...(tessPath ? { TESSDATA_PREFIX: tessPath } : {}),
-      OCR_LANGUAGES: env.OCR_LANGUAGES || "eng+ben",
     };
 
     directory = await mkdtemp(join(tmpdir(), "notify-document-"));
@@ -107,7 +100,7 @@ export async function processDocument(db, file, env = process.env) {
     db.prepare(
       "UPDATE document_previews SET status='FAILED',error=?,updated_at=? WHERE notice_id=? AND source_hash=?",
     ).run(
-      "Preview could not be prepared. The original file is available to download. Check conversion/OCR dependencies, document validity, and the 50-page preview limit.",
+      "Preview could not be prepared. The original file is available to download. Check conversion dependencies, document validity, and the 50-page preview limit.",
       Date.now(),
       file.notice_id,
       hash,

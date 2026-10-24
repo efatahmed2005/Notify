@@ -18,8 +18,8 @@ public class NoticeDetailsActivity
   private ImageButton btnBack, btnShareTop;
   private TextView tvDetailsCategory, tvDetailsDept, tvDetailsTitle;
   private TextView tvDetailsPublisher, tvDetailsTarget, tvDetailsTime, tvDetailsDescription;
-  private View cardDetailsAttachment, cardDetailsOcr;
-  private TextView tvDetailsAttachmentName, tvDetailsAttachmentSize, tvDetailsOcrText;
+  private View cardDetailsAttachment;
+  private TextView tvDetailsAttachmentName, tvDetailsAttachmentSize;
   private MaterialButton btnDetailsOpenAttachment;
   private MaterialButton btnCopyNotice, btnShareNotice;
 
@@ -84,9 +84,6 @@ public class NoticeDetailsActivity
     tvDetailsAttachmentName = findViewById(R.id.tvDetailsAttachmentName);
     tvDetailsAttachmentSize = findViewById(R.id.tvDetailsAttachmentSize);
     btnDetailsOpenAttachment = findViewById(R.id.btnDetailsOpenAttachment);
-
-    cardDetailsOcr = findViewById(R.id.cardDetailsOcr);
-    tvDetailsOcrText = findViewById(R.id.tvDetailsOcrText);
   }
 
   private void setupListeners() {
@@ -151,16 +148,6 @@ public class NoticeDetailsActivity
       tvDetailsAttachmentSize.setText(sizeInfo);
     } else {
       cardDetailsAttachment.setVisibility(View.GONE);
-    }
-
-    String ocrText = notice.getDocumentText();
-    if (cardDetailsOcr != null) {
-      if (ocrText != null && !ocrText.trim().isEmpty()) {
-        cardDetailsOcr.setVisibility(View.VISIBLE);
-        if (tvDetailsOcrText != null) tvDetailsOcrText.setText(ocrText);
-      } else {
-        cardDetailsOcr.setVisibility(View.GONE);
-      }
     }
   }
 }

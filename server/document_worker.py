@@ -1,4 +1,4 @@
-"""Convert original documents to a PDF preview and extract/OCR text locally."""
+"""Convert original documents to a PDF preview and extract text locally."""
 import json, os, pathlib, subprocess, sys, zipfile
 import pymupdf
 
@@ -33,22 +33,15 @@ if ext != ".pdf":
         raise ValueError("Office conversion did not produce a PDF")
 if pdf.stat().st_size > 25 * 1024 * 1024:
     raise ValueError("Converted document exceeds the preview size limit")
-texts, warnings = [], []
+texts = []
 with pymupdf.open(pdf) as document:
     if document.needs_pass or not 0 < len(document) <= 50:
         raise ValueError("Preview requires an unencrypted document of at most 50 pages")
     for number, page in enumerate(document):
         plain = page.get_text()
-        try:
-            # OCR image content as well as existing digital text. Preview always uses original page pixels.
-            if page.get_images() or not plain.strip():
-                tp = page.get_textpage_ocr(language=os.environ.get('OCR_LANGUAGES', 'eng'), dpi=150, full=not plain.strip(), tessdata=os.environ.get('TESSDATA_PREFIX'))
-                plain = page.get_text(textpage=tp)
-        except Exception:
-            warnings.append("Text recognition was unavailable for one or more pages; the original page preview is unchanged.")
         texts.append(plain)
         scale = min(1.5, 1600 / max(page.rect.width, page.rect.height))
         page.get_pixmap(matrix=pymupdf.Matrix(scale, scale), alpha=False).save(output / f'page-{number + 1}.png')
     count = len(document)
 (output / 'result.json').write_text(json.dumps({'pdf': str(pdf.resolve()), 'pages': count,
-    'text': '\n'.join(texts)[:300000], 'warning': ' '.join(sorted(set(warnings)))}), encoding='utf-8')
+    'text': '\n'.join(texts)[:300000], 'warning': ''}), encoding='utf-8')

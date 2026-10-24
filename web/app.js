@@ -209,17 +209,6 @@ async function openNotice(id) {
   $("detailsContent").textContent = selected.content;
   $("attachmentArea").replaceChildren();
   if (selected.file) {
-    if (selected.documentText) {
-      const docTextBox = document.createElement("div");
-      docTextBox.className = "notice-ocr-box";
-      docTextBox.innerHTML = `
-        <div class="notice-ocr-header">
-          <span>&#128196; <strong>Document Content (OCR Processed):</strong></span>
-        </div>
-        <pre class="notice-ocr-content">${Notify.escape(selected.documentText)}</pre>
-      `;
-      $("attachmentArea").append(docTextBox);
-    }
     const container = document.createElement("div");
     container.className = "attachment-card";
     container.innerHTML = `
@@ -227,14 +216,14 @@ async function openNotice(id) {
         <span class="attachment-icon" aria-hidden="true">&#128196;</span>
         <div>
           <strong class="attachment-name">${Notify.escape(selected.file.name)}</strong>
-          <div class="attachment-size">${(selected.file.size / 1024).toFixed(0)} KB &bull; Processed document</div>
+          <div class="attachment-size">${(selected.file.size / 1024).toFixed(0)} KB &bull; Attached document</div>
         </div>
       </div>
     `;
     const preview = document.createElement("button");
     preview.type = "button";
     preview.className = "button primary";
-    preview.textContent = "View Rendered Pages & Full OCR";
+    preview.textContent = "View Document";
     preview.onclick = () => window.openDocument(selected);
     container.append(preview);
     $("attachmentArea").append(container);

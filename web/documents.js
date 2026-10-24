@@ -5,26 +5,16 @@
     current,
     generation = 0;
 
-  function switchTab(showOcr) {
-    if ($("docTabPages")) $("docTabPages").classList.toggle("active", !showOcr);
-    if ($("docTabOcr")) $("docTabOcr").classList.toggle("active", showOcr);
-    if ($("documentPages")) $("documentPages").hidden = showOcr;
-    if ($("documentOcr")) $("documentOcr").hidden = !showOcr;
-  }
-
-  if ($("docTabPages")) $("docTabPages").onclick = () => switchTab(false);
-  if ($("docTabOcr")) $("docTabOcr").onclick = () => switchTab(true);
-
   async function refresh(token) {
     try {
       const document = await Notify.request(`/notices/${current.id}/document`);
       if (token !== generation || !$("documentDialog").open) return;
       $("documentStatus").textContent =
         document.status === "READY"
-          ? `${document.pageCount} page${document.pageCount === 1 ? "" : "s"} rendered &bull; OCR processed`
+          ? `${document.pageCount} page${document.pageCount === 1 ? "" : "s"} rendered`
           : document.status === "FAILED"
             ? (document.error || "Document processing failed.")
-            : "Preparing high-fidelity in-app preview and recognizing text...";
+            : "Preparing high-fidelity in-app preview...";
       $("retryDocument").hidden =
         document.status !== "FAILED" || !current.canManage;
 
@@ -36,10 +26,6 @@
           img.loading = "lazy";
           img.src = `/api/notices/${current.id}/document/pages/${page}`;
           $("documentPages").append(img);
-        }
-        if ($("documentOcrText")) {
-          $("documentOcrText").textContent =
-            document.extracted_text || "No OCR text extracted from this document.";
         }
       } else if (document.status !== "FAILED") {
         timer = setTimeout(() => refresh(token), 1500);
@@ -55,8 +41,6 @@
     generation++;
     $("documentTitle").textContent = notice.file.name;
     $("documentPages").replaceChildren();
-    if ($("documentOcrText")) $("documentOcrText").textContent = "";
-    switchTab(false);
     $("retryDocument").hidden = true;
     $("documentDialog").showModal();
     refresh(generation);
