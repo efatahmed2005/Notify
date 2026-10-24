@@ -43,13 +43,17 @@ public final class RestNoticeRepository implements NoticeRepository {
       n.getString("author"),
       User.Role.valueOf(n.getString("authorRole")),
       dept,
-      label,
+      label + " ? " + n.optString("audience", ""),
       Notice.Category.valueOf(n.getString("category")),
       Notice.Urgency.NORMAL,
       n.getLong("created")
     );
+    notice.setGroupId(
+      n.isNull("groupId") ? null : n.optString("groupId", null)
+    );
     notice.setPublicationStatus(n.getString("status"));
     notice.setVersion(n.getInt("version"));
+    notice.setDocumentText(n.optString("documentText", ""));
     JSONObject file = n.optJSONObject("file");
     if (file != null) {
       notice.setAttachmentName(file.getString("name"));
@@ -91,7 +95,9 @@ public final class RestNoticeRepository implements NoticeRepository {
               " " +
               n.getPublisherName() +
               " " +
-              n.getTargetAudience()
+              n.getTargetAudience() +
+              " " +
+              data.getJSONObject(i).optString("documentText", "")
             )
               .toLowerCase(Locale.ROOT)
               .contains(q)
@@ -123,6 +129,10 @@ public final class RestNoticeRepository implements NoticeRepository {
           "ALL".equals(notice.getTargetDepartment())
             ? ""
             : notice.getTargetDepartment()
+        );
+        body.put(
+          "groupId",
+          notice.getGroupId() == null ? "" : notice.getGroupId()
         );
         body.put("status", notice.getPublicationStatus());
         File file = notice.hasAttachment()

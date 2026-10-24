@@ -35,6 +35,67 @@ const browser = await chromium
     throw error;
   });
 try {
+  const failurePage = await browser.newPage();
+  const failureErrors = [];
+  failurePage.on("pageerror", (error) => failureErrors.push(error.message));
+  for (const failure of [
+    {
+      status: 200,
+      contentType: "text/html",
+      body: "<!DOCTYPE html><html>Static server</html>",
+    },
+    { status: 200, contentType: "application/json", body: "" },
+    { status: 200, contentType: "application/json", body: "{broken" },
+    { status: 200, contentType: "application/json", body: "null" },
+    { status: 502, contentType: "text/html", body: "<html>Bad gateway</html>" },
+  ]) {
+    await failurePage.route("**/api/config", (route) => route.fulfill(failure));
+    await failurePage.route("**/api/auth/login", (route) =>
+      route.fulfill(failure),
+    );
+    await failurePage.goto(origin);
+    const expected =
+      failure.status >= 500
+        ? "server is unavailable"
+        : "Connect to the Notify backend";
+    await failurePage.waitForFunction(
+      (text) =>
+        document.querySelector("#authMessage").textContent.includes(text),
+      expected,
+    );
+    await failurePage.locator("[data-auth-tab=staff]").first().click();
+    await failurePage.locator("#staffEmail").fill("admin@nwu.ac.bd");
+    await failurePage.locator("#staffPassword").fill(password);
+    await failurePage.locator("#staffLoginForm button[type=submit]").click();
+    await failurePage.waitForFunction(
+      (text) =>
+        document
+          .querySelector('#staffLoginForm [role="alert"]')
+          .textContent.includes(text),
+      expected,
+    );
+    assert.equal(
+      await failurePage
+        .locator("#staffLoginForm button[type=submit]")
+        .isEnabled(),
+      true,
+    );
+    await failurePage.unrouteAll({ behavior: "wait" });
+  }
+  await failurePage.route("**/api/config", (route) =>
+    route.abort("connectionrefused"),
+  );
+  await failurePage.reload();
+  await failurePage.waitForFunction(() =>
+    document
+      .querySelector("#authMessage")
+      .textContent.includes("Connect to the Notify backend"),
+  );
+  assert.deepEqual(failureErrors, []);
+  await failurePage.close();
+  console.log(
+    "PASS browser: HTML, empty, malformed, null, gateway, and offline API responses show usable errors without JSON crashes.",
+  );
   const admin = await browser.newPage({
       viewport: { width: 1440, height: 1000 },
       reducedMotion: "reduce",
@@ -114,6 +175,21 @@ try {
     .selectOption(departments[0].id);
   await directory.locator("button[type=submit]").click();
   await admin.locator(".user-record").waitFor();
+  await admin.locator("#manageDialog .close-dialog").click();
+  await admin.locator("#groupsButton").click();
+  const classForm = admin.locator('#groupsContent [data-action="create"]');
+  await classForm
+    .locator('[name="departmentId"]')
+    .selectOption(departments[0].id);
+  await classForm.locator('[name="batch"]').fill("2024");
+  await classForm.locator('[name="className"]').fill("Semester 3");
+  await classForm.locator('[name="section"]').fill("A");
+  await classForm.locator('button[type="submit"]').click();
+  await admin.locator('#groupsContent [data-action="edit"]').waitFor();
+  const classId = await admin
+    .locator('#groupsContent [data-action="edit"]')
+    .getAttribute("data-id");
+  await admin.locator("#groupsDialog .close-dialog").click();
   await teacher.reload();
   await teacher.locator("#authScreen").waitFor({ state: "visible" });
   await teacher.locator("[data-auth-tab=staff]").first().click();
@@ -127,14 +203,12 @@ try {
     .locator("#noticeContent")
     .fill("Published test notice for the assigned department.");
   await teacher.locator("#noticeStatus").selectOption("PUBLISHED");
-  await teacher.locator("#noticeDepartment").selectOption(departments[0].id);
-  await teacher
-    .locator("#noticeFile")
-    .setInputFiles({
-      name: "schedule.pdf",
-      mimeType: "application/pdf",
-      buffer: Buffer.from("%PDF-1.4\nTest file"),
-    });
+  await teacher.locator("#noticeDepartment").selectOption(classId);
+  await teacher.locator("#noticeFile").setInputFiles({
+    name: "schedule.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\nTest file"),
+  });
   await teacher.locator("#saveNotice").click();
   await teacher.locator(".notice-row").waitFor();
   const student = await browser.newPage({
@@ -143,9 +217,20 @@ try {
   });
   student.on("pageerror", (e) => errors.push(e.message));
   await student.goto(origin);
-  await student.locator("#studentId").fill("20242024010");
-  await student.locator("#studentEmail").fill("20242024010@nwu.ac.bd");
+  await student.locator("#studentIdentifier").fill("20242024010");
   await student.locator("#studentLoginForm button[type=submit]").click();
+  await student.locator("#appLayout").waitFor({ state: "visible" });
+  assert.equal(await student.locator(".notice-row").count(), 0);
+  // On mobile the navigation is collapsed.
+  await student.locator("#menuButton").click();
+  await student.locator("#groupsButton").click();
+  await student.locator('#groupsContent [data-action="join"] button').click();
+  await student.locator('#groupsContent [data-action="leave"]').waitFor();
+  await student.locator("#groupsDialog .close-dialog").click();
+  assert.equal(
+    await student.locator("#menuButton").getAttribute("aria-expanded"),
+    "false",
+  );
   await student.locator(".notice-row").waitFor();
   assert.equal(await student.locator("#newNotice").isVisible(), false);
   assert.equal(await student.locator("#manageButton").isVisible(), false);
@@ -188,9 +273,25 @@ try {
   await student.reload();
   await student.locator("#emptyState").waitFor({ state: "visible" });
   assert.equal(await student.locator(".notice-row").count(), 0);
+  const newcomer = await browser.newPage();
+  newcomer.on("pageerror", (e) => errors.push(e.message));
+  await newcomer.goto(origin);
+  await newcomer.locator("#studentIdentifier").fill("20242025021@nwu.ac.bd");
+  await newcomer.locator("#studentRegistration summary").click();
+  await newcomer.locator("#studentName").fill("New student");
+  await newcomer.locator("#studentDepartment").selectOption(departments[0].id);
+  await newcomer.locator("#studentLoginForm button[type=submit]").click();
+  await newcomer.locator("#appLayout").waitFor({ state: "visible" });
+  assert.equal(await newcomer.evaluate(() => Notify.user.role), "STUDENT");
+  assert.equal(
+    await newcomer.evaluate(() => Notify.user.email),
+    "20242025021@nwu.ac.bd",
+  );
+  assert.equal(await newcomer.locator("#manageButton").isVisible(), false);
+  await newcomer.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS browser: admin departments, teacher registration/approval, multiple assignments, head assignment, directory provisioning, publishing/archival, authorized attachment, student isolation, storage tampering, and mobile layout.",
+    "PASS browser: admin departments, teacher registration/approval, multiple assignments, head assignment, directory provisioning, student self-enrollment, class creation/joining, class-targeted publishing/archival, authorized attachment, student isolation, storage tampering, and mobile layout.",
   );
 } finally {
   await browser.close();

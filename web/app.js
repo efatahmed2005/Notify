@@ -9,13 +9,16 @@ const categories = {
 };
 let profile = null;
 let departments = { ALL: "Campus-wide" };
+let audiences = [];
 let notices = [],
   category = "ALL",
   selected = null,
   editing = null,
   toastTimer;
 const canWrite = () =>
-  profile?.status === "APPROVED" && ["TEACHER", "ADMIN"].includes(profile.role);
+  profile?.status === "APPROVED" &&
+  (profile.role === "ADMIN" ||
+    (profile.role === "TEACHER" && profile.headDepartmentIds?.length > 0));
 function message(text) {
   $("toast").textContent = text;
   $("toast").hidden = false;
@@ -45,7 +48,10 @@ async function reload() {
   applyAccountState();
   if (profile.status !== "APPROVED" || profile.mustChangePassword) return;
   applyProfile();
-  notices = await Notify.request("/notices");
+  [notices, audiences] = await Promise.all([
+    Notify.request("/notices"),
+    Notify.request("/audiences"),
+  ]);
   render();
 }
 function permitted() {
@@ -62,7 +68,14 @@ function render() {
         (dept === "ALL" ||
           n.department === (dept === "CAMPUS" ? "ALL" : dept)) &&
         (!query ||
-          [n.title, n.content, n.author, n.department]
+          [
+            n.title,
+            n.content,
+            n.author,
+            n.department,
+            n.audience,
+            n.documentText,
+          ]
             .join(" ")
             .toLowerCase()
             .includes(query)),
@@ -80,7 +93,7 @@ function render() {
   $("noticeList").innerHTML = visible
     .map(
       (n) =>
-        `<article class="notice-row"><div class="notice-main"><span class="category ${n.category === "URGENT" ? "urgent" : ""}">${categories[n.category]}</span><h3><button class="notice-link" data-id="${escapeHTML(n.id)}">${escapeHTML(n.title)}</button></h3><p>${escapeHTML(n.content)}</p><div class="notice-meta"><span>${escapeHTML(n.author)}</span><span>${escapeHTML(departments[n.department] || "Department")}</span><span>${escapeHTML(n.status)}</span>${n.file ? "<span>Attachment included</span>" : ""}</div></div><time class="notice-date" datetime="${new Date(n.created).toISOString()}">${dateLabel(n.created)}</time></article>`,
+        `<article class="notice-row"><div class="notice-main"><span class="category ${n.category === "URGENT" ? "urgent" : ""}">${categories[n.category]}</span><h3><button class="notice-link" data-id="${escapeHTML(n.id)}">${escapeHTML(n.title)}</button></h3><p>${escapeHTML(n.content)}</p><div class="notice-meta"><span>${escapeHTML(n.author)}</span><span>${escapeHTML(departments[n.department] || "Department")}</span><span>${escapeHTML(n.audience)}</span><span>${escapeHTML(n.status)}</span>${n.file ? "<span>Attachment included</span>" : ""}</div></div><time class="notice-date" datetime="${new Date(n.created).toISOString()}">${dateLabel(n.created)}</time></article>`,
     )
     .join("");
   $("emptyState").hidden = visible.length > 0;
@@ -153,13 +166,18 @@ function openComposer(notice = null) {
   $("composerForm").reset();
   $("composerError").textContent = "";
   $("composerTitle").textContent = notice ? "Edit notice" : "New notice";
-  $("noticeDepartment").innerHTML = Object.entries(departments)
-    .filter(([key]) => key !== "ALL" || profile.role === "ADMIN")
+  $("noticeDepartment").innerHTML = audiences
     .map(
-      ([key, value]) =>
-        `<option value="${escapeHTML(key)}">${escapeHTML(value)}</option>`,
+      (a) =>
+        `<option value="${escapeHTML(a.id)}">${escapeHTML(a.label)}</option>`,
     )
     .join("");
+  if (!audiences.length) {
+    message(
+      "No publishing audiences are assigned. Ask your department head or administrator to create class groups.",
+    );
+    return;
+  }
   $("noticeDepartment").disabled = !!notice;
   $("removeFileLabel").hidden = !notice?.file;
   $("noticeStatus").value = notice?.status || "DRAFT";
@@ -167,7 +185,7 @@ function openComposer(notice = null) {
     !!notice && notice.status !== "DRAFT";
   if (notice) {
     $("noticeCategory").value = notice.category;
-    $("noticeDepartment").value = notice.department;
+    $("noticeDepartment").value = notice.groupId || notice.department;
     $("noticeTitle").value = notice.title;
     $("noticeContent").value = notice.content;
   }
@@ -191,11 +209,35 @@ async function openNotice(id) {
   $("detailsContent").textContent = selected.content;
   $("attachmentArea").replaceChildren();
   if (selected.file) {
-    const link = document.createElement("a");
-    link.href = `/api/notices/${selected.id}/attachment`;
-    link.download = selected.file.name;
-    link.textContent = `Download ${selected.file.name} (${(selected.file.size / 1024).toFixed(0)} KB)`;
-    $("attachmentArea").append(link);
+    if (selected.documentText) {
+      const docTextBox = document.createElement("div");
+      docTextBox.className = "notice-ocr-box";
+      docTextBox.innerHTML = `
+        <div class="notice-ocr-header">
+          <span>&#128196; <strong>Document Content (OCR Processed):</strong></span>
+        </div>
+        <pre class="notice-ocr-content">${Notify.escape(selected.documentText)}</pre>
+      `;
+      $("attachmentArea").append(docTextBox);
+    }
+    const container = document.createElement("div");
+    container.className = "attachment-card";
+    container.innerHTML = `
+      <div class="attachment-meta">
+        <span class="attachment-icon" aria-hidden="true">&#128196;</span>
+        <div>
+          <strong class="attachment-name">${Notify.escape(selected.file.name)}</strong>
+          <div class="attachment-size">${(selected.file.size / 1024).toFixed(0)} KB &bull; Processed document</div>
+        </div>
+      </div>
+    `;
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "button primary";
+    preview.textContent = "View Rendered Pages & Full OCR";
+    preview.onclick = () => window.openDocument(selected);
+    container.append(preview);
+    $("attachmentArea").append(container);
   }
   const editable = selected.canManage;
   $("editNotice").hidden = !editable;
@@ -230,10 +272,12 @@ $("composerForm").onsubmit = (event) => {
     body.set("title", title);
     body.set("content", content);
     body.set("category", $("noticeCategory").value);
-    body.set(
-      "departmentId",
-      $("noticeDepartment").value === "ALL" ? "" : $("noticeDepartment").value,
+    const audience = audiences.find(
+      (a) => a.id === $("noticeDepartment").value,
     );
+    if (!audience) throw new Error("Choose an available audience.");
+    body.set("departmentId", audience.departmentId);
+    body.set("groupId", audience.groupId);
     body.set("status", $("noticeStatus").value);
     if (editing) body.set("version", editing.version);
     body.set("removeAttachment", String($("removeFile").checked));
@@ -328,6 +372,7 @@ document.addEventListener("notify:signed-in", async () => {
 });
 document.addEventListener("notify:signed-out", () => {
   profile = null;
+  audiences = [];
   notices = [];
   selected = null;
   editing = null;

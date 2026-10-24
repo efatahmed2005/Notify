@@ -13,6 +13,14 @@ public class SessionActivity extends AppCompatActivity {
   @Override
   protected void onResume() {
     super.onResume();
+    android.view.View administration = findViewById(
+      com.example.notify.R.id.btnAdministration
+    );
+    if (administration != null) administration.setOnClickListener(v -> {
+      Intent intent = new Intent(this, MainActivity.class);
+      intent.putExtra("openAdministration", true);
+      startActivity(intent);
+    });
     getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
     ApiClient.async(
       ApiClient::refreshSession,

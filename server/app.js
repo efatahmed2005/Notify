@@ -1,4 +1,6 @@
 import express from "express";
+import { queueDocument } from "./documents.js";
+import { groupRoutes, groupLabel } from "./groups.js";
 import helmet from "helmet";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
@@ -23,6 +25,7 @@ import {
   assigned,
   canRead,
   canManage,
+  isHead,
 } from "./permissions.js";
 
 export async function createApp({
@@ -60,10 +63,19 @@ export async function createApp({
     next();
   });
   app.use("/api", (req, res, next) => {
-    if (
-      !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-      req.get("Origin") !== origin
-    )
+    const reqOrigin = req.get("Origin");
+    const reqHost = req.get("Host");
+    const isAllowed =
+      Boolean(reqOrigin) &&
+      (reqOrigin === origin ||
+        (reqHost && (reqOrigin === `http://${reqHost}` || reqOrigin === `https://${reqHost}`)) ||
+        (!production &&
+          (reqOrigin === "null" ||
+            /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/.test(reqOrigin) ||
+            /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(reqOrigin) ||
+            /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(reqOrigin) ||
+            /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/.test(reqOrigin))));
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !isAllowed)
       return res.status(403).json({ error: "Request origin is not allowed." });
     next();
   });
@@ -294,19 +306,65 @@ export async function createApp({
       );
   });
   app.post("/api/auth/student", async (req, res) => {
-    fields(req.body, ["studentId", "email"]);
-    limit(req, "student-login", 15, req.body.email);
+    fields(req.body, [
+      "identifier",
+      "studentId",
+      "email",
+      "name",
+      "departmentId",
+    ]);
     const { id, address } = studentIdentity(req.body);
+    limit(req, "student-login", 15, address);
+    const registered = db
+      .prepare("SELECT user_id FROM student_identities WHERE student_id=?")
+      .get(id);
+    if (
+      (provisional || !sendMail) &&
+      req.body.identifier !== undefined &&
+      (req.body.name || req.body.departmentId)
+    ) {
+      if (
+        registered ||
+        db.prepare("SELECT 1 FROM users WHERE email=?").get(address)
+      )
+        fail(
+          409,
+          "This student identity is already registered. Sign in using only your ID or email.",
+        );
+      const name = text(req.body.name || `Student ${id}`, "Full name", 2, 100),
+        department = text(req.body.departmentId, "Department", 1, 100);
+      const deptRow = db
+        .prepare(
+          "SELECT id FROM departments WHERE (id=? OR code=? COLLATE NOCASE) AND active=1",
+        )
+        .get(department, department);
+      if (!deptRow)
+        fail(400, "Choose an active department.");
+      transaction(db, () => {
+        const userId = randomUUID();
+        db.prepare(
+          "INSERT INTO users(id,email,name,role,status,created_at) VALUES(?,?,?,'STUDENT','APPROVED',?)",
+        ).run(userId, address, name, Date.now());
+        db.prepare("INSERT INTO student_identities VALUES(?,?,?)").run(
+          id,
+          userId,
+          deptRow.id,
+        );
+        audit(db, userId, "STUDENT_REGISTERED", userId, {
+          departmentId: deptRow.id,
+        });
+      });
+    }
     const user = db
       .prepare(
         "SELECT u.* FROM users u JOIN student_identities s ON s.user_id=u.id JOIN departments d ON d.id=s.department_id WHERE s.student_id=? AND u.email=? AND u.status='APPROVED' AND d.active=1",
       )
       .get(id, address);
-    if (provisional) {
+    if (provisional || !sendMail) {
       if (!user)
         fail(
           401,
-          "Unable to sign in. Contact your department to confirm your directory entry.",
+          "Unable to sign in. New students must enter their name and department. Existing students should contact the university if access is unavailable.",
         );
       audit(db, user.id, "PROVISIONAL_STUDENT_LOGIN", user.id);
       return res.json(session(req, res, user, false));
@@ -317,12 +375,10 @@ export async function createApp({
         "Student email verification is not configured. Contact the university.",
       );
     if (user) await deliverToken(user, "STUDENT_VERIFY");
-    res
-      .status(202)
-      .json({
-        message:
-          "If the details match the student directory, a sign-in link will be sent to your university email.",
-      });
+    res.status(202).json({
+      message:
+        "If the details match the student directory, a sign-in link will be sent to your university email.",
+    });
   });
   app.post("/api/auth/student/verify", (req, res) => {
     fields(req.body, ["token"]);
@@ -524,6 +580,22 @@ export async function createApp({
       db.prepare(
         "UPDATE teacher_profiles SET decision_reason=?,reviewed_by=?,reviewed_at=? WHERE user_id=?",
       ).run(reason, req.user.id, Date.now(), target.id);
+      if (status === "APPROVED" && target.role === "TEACHER") {
+        const existingAssignments = db
+          .prepare("SELECT 1 FROM teacher_departments WHERE user_id=?")
+          .get(target.id);
+        if (!existingAssignments) {
+          const reqDepts = db
+            .prepare("SELECT department_id FROM teacher_requests WHERE user_id=?")
+            .all(target.id);
+          for (const r of reqDepts) {
+            db.prepare("INSERT OR IGNORE INTO teacher_departments VALUES(?,?)").run(
+              target.id,
+              r.department_id,
+            );
+          }
+        }
+      }
       revoke(target.id);
       audit(db, req.user.id, "ACCOUNT_STATUS_CHANGED", target.id, {
         from: target.status,
@@ -662,12 +734,14 @@ export async function createApp({
     ),
   );
 
+  groupRoutes(app, db, authenticate, approved);
+
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
       fileSize: 25 * 1024 * 1024,
       files: 1,
-      fields: 8,
+      fields: 9,
       fieldSize: 24 * 1024,
     },
   }).single("file");
@@ -686,6 +760,7 @@ export async function createApp({
       "status",
       "version",
       "removeAttachment",
+      "groupId",
     ]);
     const title = text(req.body.title, "Title", 1, 120),
       content = text(req.body.content, "Notice details", 1, 5000),
@@ -711,17 +786,40 @@ export async function createApp({
       );
     if (req.user.role === "STUDENT" || !assigned(db, req.user, department))
       fail(403, "You cannot publish in this department.");
+    const group = req.body.groupId || null;
+    if (group !== null && typeof group !== "string")
+      fail(400, "Choose a valid class.");
+    if (existing && group !== existing.group_id)
+      fail(400, "The notice audience cannot be changed. Create a new notice.");
+    if (
+      group &&
+      !db
+        .prepare(
+          "SELECT 1 FROM class_groups WHERE id=? AND department_id=? AND active=1",
+        )
+        .get(group, department)
+    )
+      fail(403, "This class is not available in the selected department.");
+    if (
+      !group &&
+      req.user.role !== "ADMIN" &&
+      !isHead(db, req.user, department)
+    )
+      fail(
+        403,
+        "Only the department head can broadcast to this department. Choose a class instead.",
+      );
     if (req.file) {
       const { buffer, originalname, size } = req.file;
       const ext = originalname.split(".").pop().toLowerCase();
       const signature =
         ext === "pdf"
           ? buffer.subarray(0, 5).toString() === "%PDF-"
-          : ext === "docx"
+          : ["docx", "xlsx"].includes(ext)
             ? buffer
                 .subarray(0, 4)
                 .equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))
-            : ext === "doc"
+            : ["doc", "xls"].includes(ext)
               ? buffer
                   .subarray(0, 8)
                   .equals(
@@ -731,17 +829,19 @@ export async function createApp({
                   )
               : false;
       if (!signature || !size)
-        fail(400, "Choose a valid PDF or Word document.");
+        fail(400, "Choose a valid PDF, Word, or Excel document.");
       req.file.safeName = originalname
         .replace(/[^a-zA-Z0-9._ -]/g, "_")
         .slice(-120);
       req.file.safeMime = {
         pdf: "application/pdf",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         doc: "application/msword",
         docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       }[ext];
     }
-    return { title, content, category, status, department };
+    return { title, content, category, status, department, group };
   }
   function saveAttachment(req, id) {
     if (
@@ -759,6 +859,7 @@ export async function createApp({
         req.file.size,
         req.file.buffer,
       );
+    if (req.file) queueDocument(db, id);
   }
   function revision(req, id) {
     const notice = db.prepare("SELECT * FROM notices WHERE id=?").get(id);
@@ -793,6 +894,14 @@ export async function createApp({
       category: n.category,
       status: n.status,
       department: n.department_id || "ALL",
+      groupId: n.group_id,
+      audience: n.group_id
+        ? groupLabel(
+            db.prepare("SELECT * FROM class_groups WHERE id=?").get(n.group_id),
+          )
+        : n.department_id
+          ? "Department broadcast"
+          : "University-wide broadcast",
       authorId: n.author_id,
       author: author.name,
       authorRole: author.role,
@@ -801,6 +910,12 @@ export async function createApp({
       publishedAt: n.published_at,
       version: n.version,
       file: file || null,
+      documentText:
+        db
+          .prepare(
+            "SELECT extracted_text FROM document_previews WHERE notice_id=? AND status='READY'",
+          )
+          .get(n.id)?.extracted_text || "",
       canManage: canManage(db, req.user, n),
     };
   }
@@ -839,6 +954,58 @@ export async function createApp({
       })
       .send(Buffer.from(file.data));
   });
+  app.get("/api/notices/:id/document", (req, res) => {
+    findNotice(req);
+    const preview = db
+      .prepare(
+        "SELECT status,error,extracted_text,updated_at FROM document_previews WHERE notice_id=?",
+      )
+      .get(req.params.id);
+    if (!preview) fail(404, "Document not found.");
+    res.json({
+      ...preview,
+      pageCount: db
+        .prepare("SELECT count(*) count FROM document_pages WHERE notice_id=?")
+        .get(req.params.id).count,
+    });
+  });
+  app.get("/api/notices/:id/document/pages/:page", (req, res) => {
+    findNotice(req);
+    const page = db
+      .prepare("SELECT image FROM document_pages WHERE notice_id=? AND page=?")
+      .get(req.params.id, Number(req.params.page));
+    if (!page) fail(404, "Document page not available.");
+    res.type("png").send(Buffer.from(page.image));
+  });
+  app.get("/api/notices/:id/document/pdf", (req, res) => {
+    findNotice(req);
+    const file = db
+      .prepare("SELECT * FROM attachments WHERE notice_id=?")
+      .get(req.params.id);
+    const preview = db
+      .prepare(
+        "SELECT pdf FROM document_previews WHERE notice_id=? AND status='READY'",
+      )
+      .get(req.params.id);
+    const pdf =
+      file?.mime_type === "application/pdf" ? file.data : preview?.pdf;
+    if (!pdf)
+      fail(
+        409,
+        "The document preview is still processing or could not be prepared. You can download the original file.",
+      );
+    res
+      .set("Content-Disposition", 'attachment; filename="notice-preview.pdf"')
+      .type("pdf")
+      .send(Buffer.from(pdf));
+  });
+  app.post("/api/notices/:id/document/retry", (req, res) => {
+    findNotice(req, true);
+    fields(req.body, []);
+    limit(req, "document-retry", 10);
+    queueDocument(db, req.params.id);
+    res.json({ ok: true });
+  });
   app.get("/api/notices/:id/history", (req, res) => {
     findNotice(req, true);
     res.json(
@@ -861,7 +1028,7 @@ export async function createApp({
         now = Date.now();
       transaction(db, () => {
         db.prepare(
-          "INSERT INTO notices(id,author_id,department_id,title,content,category,status,created_at,updated_at,published_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO notices(id,author_id,department_id,title,content,category,status,created_at,updated_at,published_at,group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
         ).run(
           id,
           req.user.id,
@@ -873,6 +1040,7 @@ export async function createApp({
           now,
           now,
           data.status === "PUBLISHED" ? now : null,
+          data.group,
         );
         saveAttachment(req, id);
         revision(req, id);
@@ -950,18 +1118,16 @@ export async function createApp({
     const status =
       error.status ||
       (error instanceof multer.MulterError ? 400 : constraint ? 409 : 500);
-    res
-      .status(status)
-      .json({
-        error:
-          status === 500
-            ? "The request could not be completed."
-            : constraint
-              ? "This record conflicts with an existing record."
-              : error instanceof multer.MulterError
-                ? "Attachment exceeds the supported upload limits."
-                : error.message,
-      });
+    res.status(status).json({
+      error:
+        status === 500
+          ? "The request could not be completed."
+          : constraint
+            ? "This record conflicts with an existing record."
+            : error instanceof multer.MulterError
+              ? "Attachment exceeds the supported upload limits."
+              : error.message,
+    });
   });
   return app;
 }

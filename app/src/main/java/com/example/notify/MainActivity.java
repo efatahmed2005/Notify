@@ -140,6 +140,8 @@ public class MainActivity extends AppCompatActivity {
           filePicker.launch(new String[] {
             "application/pdf",
             "application/msword",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
           });
           return true;
@@ -205,7 +207,14 @@ public class MainActivity extends AppCompatActivity {
         "Notify server is not configured. Set NOTIFY_SERVER_URL and NOTIFY_SERVER_ORIGIN when building the app."
       );
       nativeButton.setEnabled(false);
-    } else portal.loadUrl(base + "/");
+    } else portal.loadUrl(
+      base +
+        (getIntent().getBooleanExtra("openClasses", false)
+          ? "/?view=classes"
+          : getIntent().getBooleanExtra("openAdministration", false)
+            ? "/?view=administration"
+            : "/")
+    );
   }
 
   private boolean sameOrigin(Uri uri) {

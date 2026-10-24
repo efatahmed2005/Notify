@@ -109,6 +109,13 @@ public class TeacherDashboardActivity
       );
     }
 
+    boolean isDeptHead = !currentUser.getHeadDepartmentIds().isEmpty();
+    if (!isDeptHead) {
+      if (btnNewNoticeHeader != null) btnNewNoticeHeader.setVisibility(View.GONE);
+      if (fabNewNotice != null) fabNewNotice.setVisibility(View.GONE);
+    }
+
+
     View.OnClickListener openComposer = v -> {
       Intent intent = new Intent(
         TeacherDashboardActivity.this,
@@ -118,8 +125,8 @@ public class TeacherDashboardActivity
       startActivity(intent);
     };
 
-    btnNewNoticeHeader.setOnClickListener(openComposer);
-    fabNewNotice.setOnClickListener(openComposer);
+    if (btnNewNoticeHeader != null) btnNewNoticeHeader.setOnClickListener(openComposer);
+    if (fabNewNotice != null) fabNewNotice.setOnClickListener(openComposer);
   }
 
   private void loadNotices() {

@@ -46,6 +46,23 @@ export function email(value) {
   return v;
 }
 export function studentIdentity(body) {
+  if (body.identifier !== undefined) {
+    if (body.studentId !== undefined || body.email !== undefined)
+      fail(400, "Enter either an ID or an email, not multiple identities.");
+    const value = text(
+      body.identifier,
+      "Student ID or email",
+      11,
+      254,
+    ).toLowerCase();
+    const match = /^(\d{11})(?:@nwu\.ac\.bd)?$/.exec(value);
+    if (!match)
+      fail(
+        400,
+        "Enter an 11-digit student ID or its matching nwu.ac.bd email.",
+      );
+    return { id: match[1], address: `${match[1]}@nwu.ac.bd` };
+  }
   const id = text(body.studentId, "Student ID", 11, 11),
     address = email(body.email);
   if (!/^\d{11}$/.test(id) || address !== `${id}@nwu.ac.bd`)

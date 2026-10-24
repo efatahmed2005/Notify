@@ -150,8 +150,28 @@ async function fixture(t, { provisional = true, firstLogin = false } = {}) {
     });
     return { client: c, result: r };
   }
+  async function group(dept, section = "A") {
+    const r = await admin.request("/groups", "POST", {
+      departmentId: dept,
+      batch: "2024",
+      className: "Semester 3",
+      section,
+    });
+    assert.equal(r.status, 201, JSON.stringify(r.data));
+    return r.data.id;
+  }
   async function notice(c, dept, status = "PUBLISHED") {
+    const role = (await c.request("/session")).data.user.role;
+    const groupId =
+      role === "TEACHER"
+        ? db
+            .prepare(
+              "SELECT id FROM class_groups WHERE department_id=? LIMIT 1",
+            )
+            .get(dept)?.id || (await group(dept))
+        : null;
     const r = await c.request("/notices", "POST", {
+      groupId,
       title: "An authorized notice",
       content: "Actual content supplied by the author.",
       category: "ANNOUNCEMENT",
@@ -170,6 +190,7 @@ async function fixture(t, { provisional = true, firstLogin = false } = {}) {
     teacher,
     student,
     notice,
+    group,
     mail,
   };
 }
@@ -207,7 +228,7 @@ test("admin bootstrap is restricted until password change; sessions are opaque a
   );
   assert.equal((await f.admin.request("/admin/users")).status, 200);
 });
-test("students use only the server directory, cannot choose departments or escalate roles", async (t) => {
+test("directory-backed student sign-in cannot change department or escalate roles", async (t) => {
   const f = await fixture(t),
     a = await f.department("CSE"),
     b = await f.department("EEE");
@@ -259,12 +280,10 @@ test("students use only the server directory, cannot choose departments or escal
   );
   assert.equal(
     (
-      await f
-        .client()
-        .request("/auth/student", "POST", {
-          studentId: "20242025020",
-          email: "20242025020@nwu.ac.bd",
-        })
+      await f.client().request("/auth/student", "POST", {
+        studentId: "20242025020",
+        email: "20242025020@nwu.ac.bd",
+      })
     ).status,
     401,
   );
@@ -419,6 +438,7 @@ test("notice author impersonation, IDOR, scope changes, and stale versions are r
     404,
   );
   const payload = {
+    groupId: n.groupId,
     title: "Edited",
     content: "Changed details",
     category: "EXAM",
@@ -491,12 +511,10 @@ test("duplicate identities, malformed data and conflicting assignments fail with
   );
   assert.equal(
     (
-      await f
-        .client()
-        .request("/auth/student", "POST", {
-          studentId: "20242024010",
-          email: "20242025020@nwu.ac.bd",
-        })
+      await f.client().request("/auth/student", "POST", {
+        studentId: "20242024010",
+        email: "20242025020@nwu.ac.bd",
+      })
     ).status,
     400,
   );
@@ -725,8 +743,15 @@ test("attachments require current notice authorization and preserve uploaded byt
   const teacher = await f.teacher("faculty", [a]),
     student = await f.student("20242024010", a),
     other = await f.student("20242025020", b);
+  const groupId = await f.group(a);
+  assert.equal(
+    (await student.client.request(`/groups/${groupId}/join`, "POST", {}))
+      .status,
+    200,
+  );
   const data = new FormData();
   for (const [key, value] of Object.entries({
+    groupId,
     title: "Attached notice",
     content: "Read the original attachment.",
     category: "EXAM",
@@ -849,7 +874,7 @@ test("SQLite migrations are persistent, idempotent, and enforce one head per dep
   try {
     assert.equal(
       db.prepare("SELECT count(*) AS n FROM schema_migrations").get().n,
-      1,
+      2,
     );
     assert.equal(
       db.prepare("SELECT name FROM departments WHERE id='d'").get().name,
@@ -893,4 +918,355 @@ test("SQLite migrations are persistent, idempotent, and enforce one head per dep
   } finally {
     db.close();
   }
+});
+
+test("class membership is immediate, department-bound, and enforced for notices and previews", async (t) => {
+  const f = await fixture(t),
+    a = await f.department("CSE"),
+    b = await f.department("EEE");
+  const ga = await f.group(a),
+    gb = await f.group(a, "B"),
+    other = await f.group(b);
+  const teacher = await f.teacher("Class teacher", [a]);
+  const student = await f.student("20242024010", a),
+    outsider = await f.student("20242025020", b);
+  assert.equal((await student.client.request("/groups")).data.length, 2);
+  assert.equal(
+    (await student.client.request(`/groups/${other}/join`, "POST", {})).status,
+    404,
+  );
+  assert.equal(
+    (
+      await student.client.request(`/groups/${ga}/join`, "POST", {
+        userId: outsider.result.data.user.id,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/groups", "POST", {
+        departmentId: a,
+        batch: "2025",
+        className: "Year 1",
+        section: "A",
+      })
+    ).status,
+    403,
+  );
+  const data = {
+    title: "Section A exam",
+    content: "Bring your ID",
+    category: "EXAM",
+    departmentId: a,
+    groupId: ga,
+    status: "PUBLISHED",
+  };
+  const n = await teacher.client.request("/notices", "POST", data);
+  assert.equal(n.status, 201);
+  assert.equal(
+    (await student.client.request(`/notices/${n.data.id}`)).status,
+    404,
+  );
+  assert.equal(
+    (await student.client.request(`/groups/${ga}/join`, "POST", {})).status,
+    200,
+  );
+  assert.equal(
+    (await student.client.request(`/groups/${ga}/join`, "POST", {})).status,
+    200,
+  );
+  assert.equal(
+    (await student.client.request(`/notices/${n.data.id}`)).status,
+    200,
+  );
+  assert.equal(
+    (await outsider.client.request(`/notices/${n.data.id}`)).status,
+    404,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/notices", "POST", {
+        ...data,
+        groupId: other,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/notices", "POST", {
+        ...data,
+        groupId: null,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await teacher.client.request(`/notices/${n.data.id}`, "PUT", {
+        ...data,
+        groupId: gb,
+        version: 1,
+      })
+    ).status,
+    400,
+  );
+  const pdf = Buffer.from("%PDF-1.4 test");
+  f.db
+    .prepare("INSERT INTO attachments VALUES(?,?,?,?,?)")
+    .run(n.data.id, "test.pdf", "application/pdf", pdf.length, pdf);
+  f.db
+    .prepare(
+      "INSERT INTO document_previews(notice_id,source_hash,status,pdf,updated_at) VALUES(?,?,'READY',?,?)",
+    )
+    .run(n.data.id, "test", pdf, Date.now());
+  f.db
+    .prepare("INSERT INTO document_pages VALUES(?,1,?)")
+    .run(n.data.id, Buffer.from("test-image"));
+  for (const suffix of [
+    "document",
+    "document/pdf",
+    "document/pages/1",
+    "attachment",
+  ]) {
+    assert.equal(
+      (await student.client.request(`/notices/${n.data.id}/${suffix}`)).status,
+      200,
+    );
+    assert.equal(
+      (await outsider.client.request(`/notices/${n.data.id}/${suffix}`)).status,
+      404,
+    );
+  }
+  assert.equal(
+    (await student.client.request(`/groups/${ga}/membership`, "DELETE", {}))
+      .status,
+    200,
+  );
+  assert.equal(
+    (await student.client.request(`/notices/${n.data.id}/document/pdf`)).status,
+    404,
+  );
+  await student.client.request(`/groups/${ga}/join`, "POST", {});
+  await f.admin.request(
+    `/admin/students/${student.result.data.user.id}/department`,
+    "PUT",
+    { departmentId: b },
+  );
+  assert.equal(
+    f.db
+      .prepare("SELECT count(*) n FROM group_memberships WHERE user_id=?")
+      .get(student.result.data.user.id).n,
+    0,
+  );
+  assert.equal(
+    (await student.client.request(`/notices/${n.data.id}`)).status,
+    401,
+  );
+  await student.client.request("/auth/student", "POST", {
+    studentId: "20242024010",
+    email: "20242024010@nwu.ac.bd",
+  });
+  assert.equal(
+    (await student.client.request(`/notices/${n.data.id}`)).status,
+    404,
+  );
+});
+
+test("only admins broadcast university-wide; heads broadcast only their current department", async (t) => {
+  const f = await fixture(t),
+    a = await f.department("CSE"),
+    b = await f.department("EEE"),
+    teacher = await f.teacher("Head teacher", [a, b]);
+  const data = {
+    title: "Department meeting",
+    content: "Meeting details",
+    category: "ANNOUNCEMENT",
+    departmentId: a,
+    status: "PUBLISHED",
+  };
+  assert.equal(
+    (await teacher.client.request("/notices", "POST", data)).status,
+    403,
+  );
+  await f.admin.request(`/admin/departments/${a}/head`, "PUT", {
+    teacherUserId: teacher.id,
+  });
+  const n = await teacher.client.request("/notices", "POST", data);
+  assert.equal(n.status, 201);
+  assert.equal(
+    (
+      await teacher.client.request("/notices", "POST", {
+        ...data,
+        departmentId: b,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/notices", "POST", {
+        ...data,
+        departmentId: null,
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/groups", "POST", {
+        departmentId: a,
+        batch: "2024",
+        className: "Semester 1",
+        section: "A",
+      })
+    ).status,
+    201,
+  );
+  assert.equal(
+    (
+      await teacher.client.request("/groups", "POST", {
+        departmentId: b,
+        batch: "2024",
+        className: "Semester 1",
+        section: "A",
+      })
+    ).status,
+    403,
+  );
+  await f.admin.request(`/admin/departments/${a}/head`, "PUT", {
+    teacherUserId: null,
+  });
+  assert.equal(
+    (await teacher.client.request("/notices", "POST", data)).status,
+    403,
+  );
+  assert.equal(
+    (
+      await teacher.client.request(`/notices/${n.data.id}`, "PUT", {
+        ...data,
+        version: 1,
+      })
+    ).status,
+    404,
+  );
+  assert.equal(
+    (await f.admin.request("/notices", "POST", { ...data, departmentId: null }))
+      .status,
+    201,
+  );
+});
+
+test("class duplicates, inactive groups, and invalid membership constraints fail safely", async (t) => {
+  const f = await fixture(t),
+    a = await f.department("CSE"),
+    b = await f.department("EEE"),
+    g = await f.group(a);
+  const student = await f.student("20242024010", b);
+  assert.throws(() =>
+    f.db
+      .prepare("INSERT INTO group_memberships VALUES(?,?,?)")
+      .run(g, student.result.data.user.id, Date.now()),
+  );
+  const data = {
+    departmentId: a,
+    batch: "2024",
+    className: "Semester 3",
+    section: "A",
+  };
+  assert.equal((await f.admin.request("/groups", "POST", data)).status, 409);
+  assert.equal(
+    (
+      await f.admin.request(`/groups/${g}`, "PATCH", {
+        batch: "2024",
+        className: "Semester 3",
+        section: "A",
+        active: false,
+      })
+    ).status,
+    200,
+  );
+  const teacher = await f.teacher("Class faculty", [a]);
+  assert.equal((await teacher.client.request("/audiences")).data.length, 0);
+  assert.equal(
+    (
+      await teacher.client.request("/notices", "POST", {
+        title: "Inactive",
+        content: "No",
+        category: "EXAM",
+        departmentId: a,
+        groupId: g,
+        status: "PUBLISHED",
+      })
+    ).status,
+    403,
+  );
+});
+
+test("student self-enrollment accepts ID or email, rejects duplicates, and never accepts privileges", async (t) => {
+  const f = await fixture(t),
+    dept = await f.department("CSE"),
+    c = f.client();
+  const body = {
+    identifier: " 20242024010@NWU.AC.BD ",
+    name: "First student",
+    departmentId: dept,
+  };
+  const joined = await c.request("/auth/student", "POST", body);
+  assert.equal(joined.status, 200);
+  assert.equal(joined.data.user.role, "STUDENT");
+  assert.equal(joined.data.provisional, true);
+  const originalId = joined.data.user.id;
+  assert.equal(
+    (await c.request("/auth/student", "POST", { ...body, role: "ADMIN" }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (
+      await c.request("/auth/student", "POST", {
+        ...body,
+        identifier: "20242024010",
+      })
+    ).status,
+    409,
+  );
+  const returning = await c.request("/auth/student", "POST", {
+    identifier: "20242024010",
+  });
+  assert.equal(returning.status, 200);
+  assert.equal(returning.data.user.id, originalId);
+  assert.equal(
+    (
+      await c.request("/auth/student", "POST", {
+        identifier: "20242024010@nwu.ac.bd",
+      })
+    ).data.user.id,
+    originalId,
+  );
+  assert.equal(
+    (
+      await c.request("/auth/student", "POST", {
+        ...body,
+        identifier: "20242025020@other.edu",
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await c.request("/auth/student", "POST", {
+        ...body,
+        identifier: "20242025020",
+        departmentId: "invalid",
+      })
+    ).status,
+    400,
+  );
+  assert.equal((await c.request("/admin/users")).status, 403);
+  assert.equal(
+    f.db.prepare("SELECT count(*) n FROM student_identities").get().n,
+    1,
+  );
 });

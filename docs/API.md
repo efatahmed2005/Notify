@@ -22,8 +22,27 @@ All paths below are relative to `/api`. Cookies authenticate accounts. `/session
 | `/notices/:id/attachment` GET                      | Current notice-read permission, forced original-file download                      |
 | `/notices/:id/history` GET                         | Current notice managers only                                                       |
 
-Approved teachers can directly publish their own department notices, as in the existing workflow; there is no separate notice approval queue. They can save drafts, publish, archive, and delete. Heads also manage published/archived notices in their head department, including those by other teachers. Admin can manage every notice and draft. Published/archived notices cannot return to draft. Author and department are immutable; create a new notice for a different scope. Deleted records are excluded from reads while revisions/audits remain.
+Approved teachers can publish notices to active class groups in their assigned departments. Only the assigned department head or admin can broadcast to a whole department; only the admin can broadcast university-wide. there is no separate notice approval queue. They can save drafts, publish, archive, and delete. Heads also manage published/archived notices in their head department, including those by other teachers. Admin can manage every notice and draft. Published/archived notices cannot return to draft. Author, department, and class group are immutable; create a new notice for a different scope. Deleted records are excluded from reads while revisions/audits remain.
 
-Notice writes accept JSON or multipart fields: `title`, `content`, `category`, `departmentId` (empty/null for admin broadcasts), `status`, `version` for updates, and `removeAttachment`. Multipart `file` carries one original PDF/Word file up to 25 MiB. Authentication is checked both before and after upload parsing. Unknown/sensitive fields are rejected.
+Notice writes accept JSON or multipart fields: `title`, `content`, `category`, `departmentId` (empty/null for admin broadcasts), `groupId` (empty/null for broadcasts), `status`, `version` for updates, and `removeAttachment`. Multipart `file` carries one original PDF/Word/Excel file up to 25 MiB. Authentication is checked both before and after upload parsing. Unknown/sensitive fields are rejected.
 
 Android uses the same API and session. Native transport fetches `/session` before writes for a current CSRF token and identity. Intent data cannot select the server author or grant permissions.
+
+## Classes and documents
+
+| Endpoint                                | Access                                                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `GET /groups`                           | Active groups in the current department assignments; students receive their own membership status          |
+| `POST /groups`                          | Admin or current head of the requested department; fields `departmentId`, `batch`, `className`, `section`  |
+| `PATCH /groups/:id`                     | Admin or that department's head; fields `batch`, `className`, `section`, `active`; department is immutable |
+| `POST /groups/:id/join`                 | Student joins an active group in their own department immediately; empty body                              |
+| `DELETE /groups/:id/membership`         | Student leaves their own membership; empty body                                                            |
+| `GET /audiences`                        | Current permitted publishing choices for admin/teachers, including class IDs and broadcast scope           |
+| `GET /notices/:id/document`             | Current notice reader; preview status, page count, and processing warning                                  |
+| `GET /notices/:id/document/pages/:page` | Current notice reader; rendered PNG page                                                                   |
+| `GET /notices/:id/document/pdf`         | Current notice reader; original PDF or converted Office PDF                                                |
+| `POST /notices/:id/document/retry`      | Current notice manager; rate-limited processing retry                                                      |
+
+The student endpoint also accepts `{identifier}` where the value is an 11-digit ID or its official email. In unverified development mode, first-time registration adds `name` and `departmentId`; the backend fixes the role to STUDENT. An existing identity with registration fields returns 409. Later sign-ins use only `identifier` and cannot change department. IDs and emails normalize to one unique database identity. This flow provides no identity verification and cannot prevent someone entering another student's ID.
+
+A student leaving a class immediately loses access to that class's notices, original files, previews, OCR text, and rendered pages. Department transfers clear class memberships and revoke sessions. Teachers can see published class notices in their assigned departments, but cannot manage another author's notice without the department-head assignment.

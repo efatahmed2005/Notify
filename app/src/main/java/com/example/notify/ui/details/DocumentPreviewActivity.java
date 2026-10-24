@@ -36,7 +36,13 @@ public class DocumentPreviewActivity
 
   private ImageButton btnBackDoc, btnOpenExternalTop;
   private TextView tvDocPreviewTitle, tvDocPreviewSubtitle, tvPageIndicator;
-  private MaterialButton btnPrevPage, btnNextPage, btnDownloadDocTop;
+  private MaterialButton btnPrevPage, btnNextPage, btnToggleOcr;
+
+  // OCR View
+  private NestedScrollView layoutOcrTextContainer;
+  private TextView tvOcrContent;
+  private String ocrExtractedText = "";
+  private boolean isShowingOcr = false;
 
   // Multi-page Continuous PDF Views
   private RecyclerView rvPdfPages;
@@ -57,6 +63,10 @@ public class DocumentPreviewActivity
 
   private Notice notice;
   private File resolvedFile;
+  private final android.os.Handler previewHandler = new android.os.Handler(
+    android.os.Looper.getMainLooper()
+  );
+  private int previewAttempts;
 
   private final androidx.activity.result.ActivityResultLauncher<String> saveDocument =
     registerForActivityResult(
@@ -114,7 +124,11 @@ public class DocumentPreviewActivity
     tvPageIndicator = findViewById(R.id.tvPageIndicator);
     btnPrevPage = findViewById(R.id.btnPrevPage);
     btnNextPage = findViewById(R.id.btnNextPage);
-    btnDownloadDocTop = findViewById(R.id.btnDownloadDocTop);
+    btnToggleOcr = findViewById(R.id.btnToggleOcr);
+
+    // OCR Views
+    layoutOcrTextContainer = findViewById(R.id.layoutOcrTextContainer);
+    tvOcrContent = findViewById(R.id.tvOcrContent);
 
     // Continuous PDF Views
     rvPdfPages = findViewById(R.id.rvPdfPages);
@@ -142,11 +156,31 @@ public class DocumentPreviewActivity
   private void setupListeners() {
     btnBackDoc.setOnClickListener(v -> finish());
 
-    if (btnOpenExternalTop != null) {
-      btnOpenExternalTop.setOnClickListener(v -> launchExternalViewer());
+    if (btnToggleOcr != null) {
+      btnToggleOcr.setOnClickListener(v -> {
+        isShowingOcr = !isShowingOcr;
+        if (isShowingOcr) {
+          btnToggleOcr.setText("Visual Pages");
+          if (layoutOcrTextContainer != null) layoutOcrTextContainer.setVisibility(View.VISIBLE);
+          if (rvPdfPages != null) rvPdfPages.setVisibility(View.GONE);
+          if (nestedScrollFallback != null) nestedScrollFallback.setVisibility(View.GONE);
+          if (tvPageIndicator != null) tvPageIndicator.setText("OCR Text");
+          btnPrevPage.setEnabled(false);
+          btnNextPage.setEnabled(false);
+        } else {
+          btnToggleOcr.setText("OCR Text");
+          if (layoutOcrTextContainer != null) layoutOcrTextContainer.setVisibility(View.GONE);
+          if (totalPdfPages > 0 && rvPdfPages != null && pdfPagesAdapter != null) {
+            rvPdfPages.setVisibility(View.VISIBLE);
+            if (tvPageIndicator != null) tvPageIndicator.setText("Page " + (currentPdfPage + 1) + " of " + totalPdfPages);
+            btnPrevPage.setEnabled(currentPdfPage > 0);
+            btnNextPage.setEnabled(currentPdfPage < totalPdfPages - 1);
+          } else if (nestedScrollFallback != null) {
+            nestedScrollFallback.setVisibility(View.VISIBLE);
+          }
+        }
+      });
     }
-
-    btnDownloadDocTop.setOnClickListener(v -> handleDownloadDocument());
 
     btnPrevPage.setOnClickListener(v -> {
       if (
@@ -191,7 +225,10 @@ public class DocumentPreviewActivity
     });
 
     if (btnOpenOfficeApp != null) {
-      btnOpenOfficeApp.setOnClickListener(v -> launchExternalViewer());
+      btnOpenOfficeApp.setOnClickListener(v -> {
+        previewAttempts = 0;
+        loadOfficePreview();
+      });
     }
   }
 
@@ -209,6 +246,35 @@ public class DocumentPreviewActivity
 
     tvDocPreviewTitle.setText(docName);
     tvDocPreviewSubtitle.setText(docSize + " • Attached document");
+
+    if (notice.getDocumentText() != null && !notice.getDocumentText().trim().isEmpty()) {
+      ocrExtractedText = notice.getDocumentText();
+      if (tvOcrContent != null) tvOcrContent.setText(ocrExtractedText);
+    }
+
+    // Fetch recognized OCR text in parallel
+    com.example.notify.data.remote.ApiClient.async(
+      () -> com.example.notify.data.remote.ApiClient.getDocumentInfo(notice.getNoticeId()),
+      new com.example.notify.data.remote.ApiClient.Callback<org.json.JSONObject>() {
+        public void success(org.json.JSONObject doc) {
+          if (isFinishing() || isDestroyed()) return;
+          ocrExtractedText = doc.optString("extracted_text", "");
+          if (tvOcrContent != null) {
+            tvOcrContent.setText(
+              ocrExtractedText.trim().isEmpty()
+                ? "No text recognized by OCR from this document."
+                : ocrExtractedText
+            );
+          }
+        }
+
+        public void error(Exception error) {
+          if (tvOcrContent != null) {
+            tvOcrContent.setText("OCR text could not be loaded: " + error.getMessage());
+          }
+        }
+      }
+    );
 
     pbLoadingPdf.setVisibility(View.VISIBLE);
     com.example.notify.data.remote.ApiClient.async(
@@ -228,7 +294,10 @@ public class DocumentPreviewActivity
               docName,
               docSize
             );
-          } else showOfficeDocumentView(docName, docSize);
+          } else {
+            showOfficeDocumentView(docName, docSize);
+            loadOfficePreview();
+          }
         }
 
         public void error(Exception error) {
@@ -239,6 +308,41 @@ public class DocumentPreviewActivity
             Toast.LENGTH_LONG
           ).show();
           finish();
+        }
+      }
+    );
+  }
+
+  private void loadOfficePreview() {
+    if (isFinishing() || isDestroyed()) return;
+    btnOpenOfficeApp.setText("Preparing preview?");
+    btnOpenOfficeApp.setEnabled(false);
+    com.example.notify.data.remote.ApiClient.async(
+      () ->
+        com.example.notify.data.remote.ApiClient.downloadPreview(
+          this,
+          notice.getNoticeId()
+        ),
+      new com.example.notify.data.remote.ApiClient.Callback<File>() {
+        public void success(File file) {
+          if (isFinishing() || isDestroyed()) return;
+          btnOpenOfficeApp.setEnabled(true);
+          if (!initAndRenderMultiPagePdf(file)) showFallbackLetterhead(
+            notice.getAttachmentName(),
+            notice.getAttachmentSize()
+          );
+        }
+
+        public void error(Exception error) {
+          if (isFinishing() || isDestroyed()) return;
+          tvOfficeDocMeta.setText(error.getMessage());
+          btnOpenOfficeApp.setText("Retry preview");
+          btnOpenOfficeApp.setEnabled(true);
+          if (
+            ++previewAttempts < 30 &&
+            error.getMessage() != null &&
+            error.getMessage().contains("still processing")
+          ) previewHandler.postDelayed(() -> loadOfficePreview(), 3000);
         }
       }
     );
@@ -352,10 +456,15 @@ public class DocumentPreviewActivity
       notice.getAttachmentName() != null
         ? notice.getAttachmentName().toLowerCase()
         : "";
-    String mimeType =
-      docName.endsWith(".docx") || docName.endsWith(".doc")
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : "application/pdf";
+    String mimeType = docName.endsWith(".xlsx")
+      ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      : docName.endsWith(".xls")
+        ? "application/vnd.ms-excel"
+        : docName.endsWith(".docx")
+          ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          : docName.endsWith(".doc")
+            ? "application/msword"
+            : "application/pdf";
 
     PdfDocumentHelper.openDocumentExternally(this, resolvedFile, mimeType);
   }
@@ -389,6 +498,7 @@ public class DocumentPreviewActivity
 
   @Override
   protected void onDestroy() {
+    previewHandler.removeCallbacksAndMessages(null);
     super.onDestroy();
     if (pdfPagesAdapter != null) {
       pdfPagesAdapter.clearCache();

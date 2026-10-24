@@ -11,16 +11,28 @@ export function openDatabase(filename) {
   db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at INTEGER NOT NULL)",
   );
-  if (!db.prepare("SELECT 1 FROM schema_migrations WHERE version=1").get()) {
-    transaction(db, () => {
-      db.exec(
-        readFileSync(
-          new URL("./migrations/001_initial.sql", import.meta.url),
-          "utf8",
-        ),
-      );
-      db.prepare("INSERT INTO schema_migrations VALUES(1,?)").run(Date.now());
-    });
+  for (const [version, filename] of [
+    [1, "001_initial.sql"],
+    [2, "002_class_groups.sql"],
+  ]) {
+    if (
+      !db
+        .prepare("SELECT 1 FROM schema_migrations WHERE version=?")
+        .get(version)
+    ) {
+      transaction(db, () => {
+        db.exec(
+          readFileSync(
+            new URL(`./migrations/${filename}`, import.meta.url),
+            "utf8",
+          ),
+        );
+        db.prepare("INSERT INTO schema_migrations VALUES(?,?)").run(
+          version,
+          Date.now(),
+        );
+      });
+    }
   }
   return db;
 }

@@ -130,7 +130,7 @@ public class CreateNoticeActivity
           : "Attached_Document.pdf";
     }
 
-    String sizeStr = "1.2 MB";
+    String sizeStr = "Size unavailable";
     if (sizeBytes > 0) {
       if (sizeBytes >= 1024 * 1024) {
         sizeStr = String.format(
@@ -147,6 +147,8 @@ public class CreateNoticeActivity
     String lower = displayName.toLowerCase();
     if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
       type = "docx";
+    } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+      type = "xlsx";
     }
 
     // Persist picked document immediately into app-internal attachments storage
@@ -205,6 +207,8 @@ public class CreateNoticeActivity
       "application/pdf",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/msword",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     };
     intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes);
     intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -222,25 +226,34 @@ public class CreateNoticeActivity
     }
   }
 
-  private final java.util.LinkedHashMap<String, String> audienceIds =
-    new java.util.LinkedHashMap<>();
+  private final java.util.LinkedHashMap<
+    String,
+    org.json.JSONObject
+  > audienceIds = new java.util.LinkedHashMap<>();
 
   private void setupDropdownBasedOnRole() {
     btnSend.setEnabled(false);
     com.example.notify.data.remote.ApiClient.async(
-      com.example.notify.data.remote.ApiClient::refreshSession,
-      new com.example.notify.data.remote.ApiClient.Callback<User>() {
-        public void success(User user) {
-          currentUser = user;
+      () -> {
+        currentUser = com.example.notify.data.remote.ApiClient.refreshSession();
+        return new org.json.JSONArray(
+          com.example.notify.data.remote.ApiClient.request(
+            "/api/audiences",
+            "GET",
+            null
+          )
+        );
+      },
+      new com.example.notify.data.remote.ApiClient.Callback<org.json.JSONArray>() {
+        public void success(org.json.JSONArray choices) {
           audienceIds.clear();
-          if (user.getRole() == User.Role.ADMIN) audienceIds.put(
-            "Campus-wide (all departments)",
-            "ALL"
-          );
-          for (java.util.Map.Entry<String, String> department : user
-            .getDepartmentNames()
-            .entrySet())
-            audienceIds.put(department.getValue(), department.getKey());
+          for (int i = 0; i < choices.length(); i++) {
+            org.json.JSONObject choice = choices.optJSONObject(i);
+            if (choice != null) audienceIds.put(
+              choice.optString("label"),
+              choice
+            );
+          }
           String[] audiences = audienceIds.keySet().toArray(new String[0]);
           actvAudience.setAdapter(
             new ArrayAdapter<>(
@@ -251,8 +264,8 @@ public class CreateNoticeActivity
           );
           if (audiences.length > 0) actvAudience.setText(audiences[0], false);
           btnSend.setEnabled(
-            user.isApproved() &&
-              user.getRole() != User.Role.STUDENT &&
+            currentUser.isApproved() &&
+              currentUser.getRole() != User.Role.STUDENT &&
               audiences.length > 0
           );
         }
@@ -334,9 +347,14 @@ public class CreateNoticeActivity
 
       // Determine target dept based on user's authorized scope
       String selectedAudience = actvAudience.getText().toString();
-      String targetDept = audienceIds.get(selectedAudience);
+      org.json.JSONObject audience = audienceIds.get(selectedAudience);
+      String targetDept =
+        audience == null ? null : audience.optString("departmentId", "");
+      if ("".equals(targetDept)) targetDept = "ALL";
       if (targetDept == null) {
-        actvAudience.setError("Choose an assigned department.");
+        actvAudience.setError(
+          "Choose an available class or broadcast audience."
+        );
         return;
       }
 
@@ -361,6 +379,7 @@ public class CreateNoticeActivity
             : null
       );
 
+      newNotice.setGroupId(audience.optString("groupId", ""));
       boolean draft = (
         (android.widget.CheckBox) findViewById(R.id.cbSaveDraft)
       ).isChecked();

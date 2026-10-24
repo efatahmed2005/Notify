@@ -85,6 +85,11 @@ export function canManage(db, user, notice) {
   return (
     user.role === "TEACHER" &&
     assigned(db, user, notice.department_id) &&
+    (!notice.group_id
+      ? isHead(db, user, notice.department_id)
+      : !!db
+          .prepare("SELECT 1 FROM class_groups WHERE id=? AND active=1")
+          .get(notice.group_id)) &&
     (notice.author_id === user.id ||
       (notice.status !== "DRAFT" && isHead(db, user, notice.department_id)))
   );
@@ -99,6 +104,17 @@ export function canRead(db, user, notice) {
   if (canManage(db, user, notice)) return true;
   return (
     notice.status === "PUBLISHED" &&
-    (notice.department_id === null || assigned(db, user, notice.department_id))
+    (notice.department_id === null ||
+      assigned(db, user, notice.department_id)) &&
+    (!notice.group_id ||
+      (!!db
+        .prepare("SELECT 1 FROM class_groups WHERE id=? AND active=1")
+        .get(notice.group_id) &&
+        (user.role !== "STUDENT" ||
+          !!db
+            .prepare(
+              "SELECT 1 FROM group_memberships WHERE group_id=? AND user_id=?",
+            )
+            .get(notice.group_id, user.id))))
   );
 }

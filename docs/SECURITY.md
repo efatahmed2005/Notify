@@ -20,7 +20,7 @@ Teacher department requests are not permissions. Approval and assignment are sep
 
 Department heads use their existing individual teacher accounts. The suggested shared head password is deliberately not installed. No special password or login role grants head permissions. Replacing a head and changing memberships are transactional.
 
-Students must already exist in the admin-managed directory. ID/email matching is provisional, opt-in in development, visibly labeled, and forbidden under `NODE_ENV=production`. The default flow sends a single-use sign-in link to the university email. Departments are never inferred from an ID or accepted from a student login request. Integrate an approved university directory and identity-verification process before deployment.
+Student entry has two modes. The requested local mode accepts an ID or university email without verification and permits first-time self-enrollment into an active department; existing accounts cannot change department at sign-in. It is visibly marked unverified and remains forbidden under `NODE_ENV=production`. The verified mode requires an existing directory entry and sends a single-use email link. Duplicate records are prevented in both modes, but unverified entry cannot prove identity or initial department membership.
 
 ## Public deployment gates
 
@@ -40,3 +40,11 @@ No real infrastructure, mail delivery, gateway policy, or student records have b
 SQLite provides persistent transactions for a single server on a local disk. This implementation does not provide distributed sessions/rate limits, horizontal scaling, durable mail retries, push notifications, or external security monitoring. Lists currently load authorized results without pagination; add pagination and quotas for scale. Revisions retain content/metadata but not earlier attachment bytes after replacement. Audit logs are application-protected, not tamper-proof against a database administrator; export to an institutional append-only audit service where required.
 
 A dashboard, passing tests, production flag, or gateway acknowledgement alone is not proof of production security.
+
+## Updated student and class workflow
+
+At the project owner's request, development student access accepts either an ID or university email without verification and permits self-enrollment into a chosen active department. ID/email uniqueness prevents duplicate records, but does not prevent impersonation or a false department declaration at registration. Existing students cannot change their department at sign-in. These accounts never receive teacher/admin powers. The provisional label and production startup restriction remain in place; this is not a verified student identity system.
+
+Students may immediately join any active class within their current department. Therefore class membership is self-declared, not verified enrollment. Leaving a class, transferring department, or deactivating a class removes access to notices and document artifacts on subsequent requests. Teacher department assignments and head responsibilities remain administrator-controlled.
+
+See [document processing](DOCUMENTS.md) for converter isolation, limits, and exact-file versus converted-preview behavior.

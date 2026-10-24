@@ -52,6 +52,16 @@ public class Notice implements Serializable {
   private long timestamp; // Unix epoch millis
 
   // Attachment fields (PDF / Documents)
+  private String groupId;
+
+  public String getGroupId() {
+    return groupId;
+  }
+
+  public void setGroupId(String value) {
+    groupId = value;
+  }
+
   private String attachmentName;
   private String attachmentType; // "pdf", "doc", "docx"
   private String attachmentSize; // e.g. "1.4 MB"
@@ -238,5 +248,15 @@ public class Notice implements Serializable {
 
   public void setAttachmentUrl(String attachmentUrl) {
     this.attachmentUrl = attachmentUrl;
+  }
+
+  private String documentText = "";
+
+  public String getDocumentText() {
+    return documentText != null ? documentText : "";
+  }
+
+  public void setDocumentText(String documentText) {
+    this.documentText = documentText != null ? documentText : "";
   }
 }

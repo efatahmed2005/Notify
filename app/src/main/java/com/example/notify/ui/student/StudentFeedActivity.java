@@ -154,7 +154,7 @@ public class StudentFeedActivity extends com.example.notify.ui.SessionActivity {
       finish();
     });
 
-    // Top navbar logout facility
+
     if (btnLogout != null) {
       btnLogout.setOnClickListener(v ->
         com.example.notify.data.remote.ApiClient.logout(this, () -> {

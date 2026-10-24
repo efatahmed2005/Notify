@@ -1,6 +1,6 @@
 # Persistence and migration
 
-`server/db.js` enables SQLite foreign keys, WAL, and a busy timeout. It applies `server/migrations/001_initial.sql` within a `BEGIN IMMEDIATE` transaction and records its version in `schema_migrations`. Future changes need new migration files and explicit version handling; never edit an already deployed migration.
+`server/db.js` enables SQLite foreign keys, WAL, and a busy timeout. It applies numbered migrations (currently `001_initial.sql` and `002_class_groups.sql`) within `BEGIN IMMEDIATE` transactions and records each version in `schema_migrations`. Future changes need new migration files and explicit version handling; never edit an already deployed migration.
 
 | Table                 | Integrity and purpose                                                                                                   |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -14,7 +14,7 @@
 | `sessions`            | Hashed opaque token, user reference, CSRF token, verification marker, expiry; user/expiry indexes                       |
 | `auth_tokens`         | Hashed, expiring, one-use reset/student-verification tokens                                                             |
 | `rate_limits`         | Persistent HMAC-keyed attempt counters with expiry                                                                      |
-| `notices`             | Immutable author/scope; status/time/version; only admin-authored notices may broadcast                                  |
+| `notices`             | Immutable author/scope; status/time/version; only admin-authored notices may broadcast university-wide                                  |
 | `attachments`         | Original bytes, sanitized name/MIME/size; authorized download only                                                      |
 | `notice_revisions`    | Unique notice/version snapshots with actor and time                                                                     |
 | `audit_logs`          | Account decisions, memberships, head changes, and notice transitions                                                    |
@@ -32,3 +32,9 @@ Legacy data is never silently imported. Existing browser data remains untouched.
 5. Move attachment bytes to private object storage if needed, with authorization, quarantine/scanning, quotas, and retention. Any signed download URLs must be scoped and short-lived.
 6. Use shared throttling/session infrastructure for multiple instances and export audits to an append-only service.
 7. Rehearse read-only cutover, rollback, and restore with nonproduction data; rerun API/browser suites before enabling writes.
+
+## Classes and document processing
+
+Migration 002 adds `class_groups` (unique department/batch/class/section), `group_memberships` (unique group/student, with a same-department eligibility trigger), and immutable `notices.group_id`. A student department transfer clears memberships. Existing notices retain their department scope; ordinary teachers can read existing published department notices but need current head permission to modify or publish department-wide notices.
+
+`document_previews` stores source hashes, queue status, PDF bytes, extracted/OCR text, and processing errors. `document_pages` stores numbered PNG page previews. Both cascade from the attachment; replacement removes stale previews. The worker checks the source hash before committing results so a replaced or deleted attachment cannot receive stale output. Pending work survives a restart, and interrupted work is requeued. Original attachment bytes are never overwritten by OCR or conversion.

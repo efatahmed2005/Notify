@@ -55,15 +55,9 @@ public final class ApiClient {
     String type
   ) throws Exception {
     URL base = new URL(baseUrl());
-    if (
-      !"https".equals(base.getProtocol()) &&
-      !(
-        BuildConfig.DEBUG &&
-        ("10.0.2.2".equals(base.getHost()) ||
-          "localhost".equals(base.getHost()) ||
-          "127.0.0.1".equals(base.getHost()))
-      )
-    ) throw new IOException("Configure an HTTPS Notify server.");
+    if (!"https".equals(base.getProtocol()) && !BuildConfig.DEBUG) {
+      throw new IOException("Configure an HTTPS Notify server.");
+    }
     if (!path.startsWith("/api/")) throw new IOException("Invalid API path");
     HttpURLConnection c = (HttpURLConnection) new URL(
       baseUrl() + path
@@ -117,6 +111,30 @@ public final class ApiClient {
     }
   }
 
+  private static String jsonResponse(HttpURLConnection connection)
+    throws Exception {
+    String type = connection.getContentType();
+    byte[] bytes = response(connection);
+    String text = new String(bytes, StandardCharsets.UTF_8);
+    try {
+      if (
+        type == null ||
+        !type.toLowerCase(java.util.Locale.ROOT).contains("application/json")
+      ) {
+        throw new IOException("Invalid content type");
+      }
+      Object parsed = new org.json.JSONTokener(text).nextValue();
+      if (!(parsed instanceof JSONObject) && !(parsed instanceof JSONArray)) {
+        throw new IOException("Invalid response");
+      }
+    } catch (Exception invalid) {
+      throw new IOException(
+        "The server did not return a valid Notify response. Check the server address and make sure the Notify backend is running."
+      );
+    }
+    return text;
+  }
+
   public static String request(String path, String method, JSONObject body)
     throws Exception {
     if (!"GET".equals(method)) refreshSession();
@@ -131,15 +149,12 @@ public final class ApiClient {
         out.write(body.toString().getBytes(StandardCharsets.UTF_8));
       }
     }
-    return new String(response(c), StandardCharsets.UTF_8);
+    return jsonResponse(c);
   }
 
   public static synchronized User refreshSession() throws Exception {
     JSONObject data = new JSONObject(
-      new String(
-        response(connection("/api/session", "GET", null)),
-        StandardCharsets.UTF_8
-      )
+      jsonResponse(connection("/api/session", "GET", null))
     );
     csrf = data.getString("csrfToken");
     currentUser = User.fromJson(data.getJSONObject("user"));
@@ -197,7 +212,7 @@ public final class ApiClient {
       }
       out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
     }
-    return new JSONObject(new String(response(c), StandardCharsets.UTF_8));
+    return new JSONObject(jsonResponse(c));
   }
 
   public static File download(Context context, String noticeId, String name)
@@ -214,6 +229,32 @@ public final class ApiClient {
       out.write(data);
     }
     return file;
+  }
+
+  public static File downloadPreview(Context context, String noticeId)
+    throws Exception {
+    byte[] data = response(
+      connection("/api/notices/" + noticeId + "/document/pdf", "GET", null)
+    );
+    if (
+      data.length < 5 ||
+      !new String(data, 0, 5, StandardCharsets.US_ASCII).equals("%PDF-")
+    ) throw new IOException("Document preview is not a PDF.");
+    File file = File.createTempFile(
+      "notice-preview-",
+      ".pdf",
+      context.getCacheDir()
+    );
+    try (OutputStream out = new FileOutputStream(file)) {
+      out.write(data);
+    }
+    return file;
+  }
+
+  public static JSONObject getDocumentInfo(String noticeId) throws Exception {
+    return new JSONObject(
+      jsonResponse(connection("/api/notices/" + noticeId + "/document", "GET", null))
+    );
   }
 
   public static void logout(Context context, Runnable complete) {

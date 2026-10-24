@@ -14,6 +14,8 @@
     <script src="api.js" defer></script>
     <script src="auth.js" defer></script>
     <script src="manage.js" defer></script>
+    <script src="groups.js" defer></script>
+    <script src="documents.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -28,7 +30,8 @@
       <div class="auth-card">
         <nav class="auth-tabs" aria-label="Sign-in options">
           <button type="button" data-auth-tab="student">Student sign in</button
-          ><button type="button" data-auth-tab="staff">Teacher / Admin sign in</button
+          ><button type="button" data-auth-tab="staff">
+            Teacher / Admin sign in</button
           ><button type="button" data-auth-tab="register">
             Teacher registration
           </button>
@@ -40,22 +43,31 @@
             Use your university student ID and email.
           </p>
           <label
-            >Student ID<input
-              id="studentId"
-              inputmode="numeric"
-              pattern="[0-9]{11}"
-              minlength="11"
-              maxlength="11"
+            >Student ID or university email<input
+              id="studentIdentifier"
               autocomplete="username"
-              required /></label
-          ><label
-            >University email<input
-              id="studentEmail"
-              type="email"
-              autocomplete="email"
+              maxlength="254"
               required
-              placeholder="StudentID@nwu.ac.bd"
+              placeholder="20242024010 or 20242024010@nwu.ac.bd"
           /></label>
+          <details id="studentRegistration">
+            <summary>First time here? Join as a student</summary>
+            <p>
+              Enter your name and department once. For later sign-ins, use only
+              your ID or email.
+            </p>
+            <label
+              >Full name<input
+                id="studentName"
+                autocomplete="name"
+                maxlength="100"
+            /></label>
+            <label
+              >Department<select id="studentDepartment">
+                <option value="">Choose your department</option>
+              </select></label
+            >
+          </details>
           <p role="alert" class="form-error"></p>
           <button type="submit" class="button primary">Continue</button>
         </form>
@@ -104,17 +116,14 @@
               autocomplete="username"
               required /></label
           ><label
-            >Requested departments<select
+            >Department<select
               id="requestedDepartments"
-              multiple
-              size="4"
               required
               aria-describedby="departmentHelp"
-            ></select
+            ><option value="">Choose your department</option></select
           ></label>
           <p class="field-help" id="departmentHelp">
-            Select all departments you teach in. Hold Ctrl or Command to select
-            more than one on a desktop. Assignment requires admin approval.
+            Select your initial department. The administrator can assign additional departments upon approval.
           </p>
           <label
             >Institutional information<textarea
@@ -269,7 +278,6 @@
           <button class="nav-item" data-category="URGENT">
             <span class="nav-symbol" aria-hidden="true">!</span>Urgent notices
           </button>
-        </nav>
         <button class="nav-item" id="manageButton" hidden>Administration</button
         ><button class="nav-item" data-sign-out>Sign out</button>
         <div class="sidebar-note">
@@ -502,7 +510,7 @@
           </button>
         </div>
         <p class="form-intro">
-          Publish to an assigned department, or save a draft for later.
+          Choose a class, or a broadcast audience you are authorized to use.
         </p>
         <div class="form-row">
           <label
@@ -530,11 +538,14 @@
           ></textarea></label
         ><label
           >Attachment <span class="optional">(optional)</span
-          ><input id="noticeFile" type="file" accept=".pdf,.doc,.docx"
+          ><input
+            id="noticeFile"
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx"
         /></label>
         <p class="field-help">
-          PDF or Word document, up to 25 MB. The original file is stored on the
-          server for authorized readers.
+          PDF, Word, or Excel document, up to 25 MB. The original file is stored
+          on the server for authorized readers.
         </p>
         <label
           >Publication status<select id="noticeStatus">
@@ -580,6 +591,32 @@
         </button>
       </div>
     </dialog>
+    <dialog
+      id="documentDialog"
+      class="document-dialog"
+      aria-labelledby="documentTitle"
+    >
+      <div class="dialog-heading">
+        <h2 id="documentTitle">Document</h2>
+        <button
+          type="button"
+          class="icon-button close-dialog"
+          aria-label="Close document"
+        >
+          &times;
+        </button>
+      </div>
+      <p id="documentStatus" role="status"></p>
+      <div class="doc-view-tabs" id="docViewTabs">
+        <button type="button" id="docTabPages" class="active">Visual Pages</button>
+        <button type="button" id="docTabOcr">Recognized Text (OCR)</button>
+      </div>
+      <button id="retryDocument" type="button" class="button secondary" hidden>
+        Retry preview
+      </button>
+      <div id="documentPages" class="document-pages"></div>
+      <div id="documentOcr" class="document-ocr" hidden><pre id="documentOcrText"></pre></div>
+    </dialog>
     <dialog id="deleteDialog" aria-labelledby="deleteTitle">
       <h2 id="deleteTitle">Delete this notice?</h2>
       <p>
@@ -608,9 +645,7 @@
       </div>
       <nav class="auth-tabs" aria-label="Administration sections">
         <button data-manage-tab="departments">Departments</button
-        ><button data-manage-tab="teachers">Teachers</button
-        ><button data-manage-tab="students">Students</button
-        ><button data-manage-tab="audit">Audit history</button>
+        ><button data-manage-tab="teachers">Teachers</button>
       </nav>
       <p id="manageError" role="alert" class="form-error"></p>
       <div id="manageContent"></div>

@@ -108,6 +108,8 @@
                     app:tint="@color/badge_urgent" />
             </RelativeLayout>
 
+
+
             <!-- Search Bar -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"

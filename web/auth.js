@@ -49,12 +49,19 @@
       const result = await Notify.request("/auth/student", {
         method: "POST",
         body: {
-          studentId: $("studentId").value.trim(),
-          email: $("studentEmail").value.trim(),
+          identifier: $("studentIdentifier").value.trim(),
+          ...($("studentName").value.trim() || $("studentDepartment").value
+            ? {
+                name: $("studentName").value.trim(),
+                departmentId: $("studentDepartment").value,
+              }
+            : {}),
         },
       });
-      if (result.user) signedIn();
-      else $("authMessage").textContent = result.message;
+      if (result.user) {
+        $("studentLoginForm").reset();
+        signedIn();
+      } else $("authMessage").textContent = result.message;
     });
   };
   $("staffLoginForm").onsubmit = (event) => {
@@ -214,16 +221,27 @@
         Notify.request("/departments/public"),
       ]);
       $("studentLoginHelp").textContent = config.provisionalStudents
-        ? "Provisional development login: ID and email are not proof of identity. Your department must already be recorded in the university directory."
+        ? "Use either your student ID or university email. No password or verification is required; this sign-in does not verify identity."
         : "Enter your directory details. We will send a sign-in link to your university email. Your department is assigned by the university.";
-      $("requestedDepartments").innerHTML = departments
-        .map(
-          (d) =>
-            `<option value="${Notify.escape(d.id)}">${Notify.escape(d.name)} (${Notify.escape(d.code)})</option>`,
-        )
-        .join("");
+      $("studentRegistration").hidden = !config.provisionalStudents;
+      $("studentDepartment").innerHTML =
+        '<option value="">Choose your department</option>' +
+        departments
+          .map(
+            (d) =>
+              `<option value="${Notify.escape(d.id)}">${Notify.escape(d.name)}</option>`,
+          )
+          .join("");
+      $("requestedDepartments").innerHTML =
+        '<option value="">Choose your department</option>' +
+        departments
+          .map(
+            (d) =>
+              `<option value="${Notify.escape(d.id)}">${Notify.escape(d.name)} (${Notify.escape(d.code)})</option>`,
+          )
+          .join("");
       const hash = new URLSearchParams(location.hash.slice(1));
-      history.replaceState(null, "", location.pathname);
+      history.replaceState(null, "", location.pathname + location.search);
       if (hash.has("reset")) {
         recoveryToken = hash.get("reset");
         showPanel("reset");
@@ -240,6 +258,19 @@
       try {
         await Notify.request("/session");
         signedIn();
+        if (
+          new URLSearchParams(location.search).get("view") ===
+            "administration" &&
+          Notify.user.role === "ADMIN" &&
+          !Notify.user.mustChangePassword
+        )
+          $("manageButton").click();
+        if (
+          new URLSearchParams(location.search).get("view") === "classes" &&
+          Notify.user.status === "APPROVED" &&
+          !Notify.user.mustChangePassword
+        )
+          $("groupsButton")?.click();
       } catch (e) {
         if (e.status !== 401) throw e;
       }

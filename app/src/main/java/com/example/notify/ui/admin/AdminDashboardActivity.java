@@ -2,6 +2,7 @@ package com.example.notify.ui.admin;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
@@ -104,6 +105,16 @@ public class AdminDashboardActivity
           finish();
         })
       );
+    }
+
+
+    View btnAdministration = findViewById(R.id.btnAdministration);
+    if (btnAdministration != null) {
+      btnAdministration.setOnClickListener(v -> {
+        Intent intent = new Intent(this, com.example.notify.MainActivity.class);
+        intent.putExtra("openAdministration", true);
+        startActivity(intent);
+      });
     }
 
     fabAdminBroadcast.setOnClickListener(v -> {
