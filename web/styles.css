@@ -1098,11 +1098,53 @@ th {
   display: block;
   font-size: 14px;
   color: var(--text);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .attachment-size {
   display: block;
   font-size: 12px;
   color: var(--muted);
+}
+
+.notice-zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 16px;
+  padding: 6px 12px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  width: fit-content;
+}
+.zoom-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.zoom-btn {
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--brand);
+  cursor: pointer;
+}
+.zoom-btn:hover {
+  background: var(--accent);
+}
+.zoom-btn.reset {
+  font-size: 11px;
+  color: var(--muted);
+}
+.zoom-level {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand);
+  min-width: 38px;
+  text-align: center;
 }
 
 

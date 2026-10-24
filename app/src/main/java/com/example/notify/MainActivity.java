@@ -71,6 +71,14 @@ public class MainActivity extends AppCompatActivity {
     getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
     LinearLayout layout = new LinearLayout(this);
     layout.setOrientation(LinearLayout.VERTICAL);
+    layout.setFitsSystemWindows(true);
+    androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(layout, (v, insets) -> {
+      androidx.core.graphics.Insets sb = insets.getInsets(
+        androidx.core.view.WindowInsetsCompat.Type.systemBars()
+      );
+      v.setPadding(0, Math.max(sb.top, 24), 0, 0);
+      return insets;
+    });
     errorText = new TextView(this);
     errorText.setPadding(24, 16, 24, 16);
     errorText.setVisibility(View.GONE);
@@ -90,6 +98,20 @@ public class MainActivity extends AppCompatActivity {
       .setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     CookieManager.getInstance().setAcceptCookie(true);
     CookieManager.getInstance().setAcceptThirdPartyCookies(portal, false);
+
+    // Persistent login check on launch
+    ApiClient.async(
+      ApiClient::refreshSession,
+      new ApiClient.Callback<User>() {
+        public void success(User user) {
+          if (user != null && user.isApproved() && !isFinishing()) {
+            launchNativeDashboard(user);
+          }
+        }
+        public void error(Exception ignored) {}
+      }
+    );
+
     portal.setWebViewClient(
       new WebViewClient() {
         @Override
@@ -124,6 +146,17 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onPageFinished(WebView view, String url) {
           CookieManager.getInstance().flush();
+          ApiClient.async(
+            ApiClient::refreshSession,
+            new ApiClient.Callback<User>() {
+              public void success(User user) {
+                if (user != null && user.isApproved() && !isFinishing()) {
+                  launchNativeDashboard(user);
+                }
+              }
+              public void error(Exception ignored) {}
+            }
+          );
         }
       }
     );
@@ -185,13 +218,7 @@ public class MainActivity extends AppCompatActivity {
               );
               return;
             }
-            Class<?> target =
-              user.getRole() == User.Role.ADMIN
-                ? com.example.notify.ui.admin.AdminDashboardActivity.class
-                : user.getRole() == User.Role.TEACHER
-                  ? com.example.notify.ui.teacher.TeacherDashboardActivity.class
-                  : com.example.notify.ui.student.StudentFeedActivity.class;
-            startActivity(new Intent(MainActivity.this, target));
+            launchNativeDashboard(user);
           }
 
           public void error(Exception e) {
@@ -215,6 +242,18 @@ public class MainActivity extends AppCompatActivity {
             ? "/?view=administration"
             : "/")
     );
+  }
+
+  private void launchNativeDashboard(User user) {
+    Class<?> target =
+      user.getRole() == User.Role.ADMIN
+        ? com.example.notify.ui.admin.AdminDashboardActivity.class
+        : user.getRole() == User.Role.TEACHER
+          ? com.example.notify.ui.teacher.TeacherDashboardActivity.class
+          : com.example.notify.ui.student.StudentFeedActivity.class;
+    Intent intent = new Intent(MainActivity.this, target);
+    startActivity(intent);
+    finish();
   }
 
   private boolean sameOrigin(Uri uri) {

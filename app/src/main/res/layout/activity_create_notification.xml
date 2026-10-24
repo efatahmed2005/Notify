@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@color/background">
 
     <!-- Top App Bar -->
@@ -227,7 +228,8 @@
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/on_surface"
-                        android:singleLine="true" />
+                        android:maxLines="3"
+                        android:ellipsize="middle" />
 
                     <ImageButton
                         android:id="@+id/btnRemoveAttachment"

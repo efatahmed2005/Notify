@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="#334155">
 
     <!-- Top App Bar / Document Toolbar -->
@@ -15,8 +16,10 @@
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbarDocPreview"
             android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:paddingHorizontal="8dp">
+            android:layout_height="wrap_content"
+            android:minHeight="?attr/actionBarSize"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp">
 
             <ImageButton
                 android:id="@+id/btnBackDoc"
@@ -28,35 +31,32 @@
                 app:tint="@color/on_surface" />
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_weight="1"
                 android:layout_marginStart="12dp"
+                android:layout_marginEnd="8dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:id="@+id/tvDocPreviewTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:ellipsize="end"
-                    android:maxLines="1"
+                    android:ellipsize="middle"
+                    android:maxLines="2"
                     android:text=""
                     android:textColor="@color/on_surface"
-                    android:textSize="16sp"
+                    android:textSize="15sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tvDocPreviewSubtitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Attached document Preview"
                     android:textColor="@color/on_surface_variant"
                     android:textSize="11sp" />
             </LinearLayout>
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
 
             <ImageButton
                 android:id="@+id/btnOpenExternalTop"

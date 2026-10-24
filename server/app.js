@@ -87,7 +87,7 @@ export async function createApp({
     secure: production,
     sameSite: "strict",
     path: "/",
-    maxAge: 8 * 60 * 60 * 1000,
+    maxAge: 90 * 24 * 60 * 60 * 1000,
   };
   function limit(req, scope, max = 20, account) {
     throttle(db, secret, scope, req.ip, max);
@@ -763,7 +763,7 @@ export async function createApp({
       "groupId",
     ]);
     const title = text(req.body.title, "Title", 1, 120),
-      content = text(req.body.content, "Notice details", 1, 5000),
+      content = req.body.content ? text(req.body.content, "Notice details", 0, 5000) : "",
       category = req.body.category,
       status = req.body.status;
     if (

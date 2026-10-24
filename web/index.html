@@ -529,12 +529,11 @@
             maxlength="120"
             placeholder="A short, descriptive title" /></label
         ><label
-          >Notice details<textarea
+          >Notice details <span class="optional">(optional)</span><textarea
             id="noticeContent"
-            required
             maxlength="5000"
             rows="6"
-            placeholder="Include the dates, locations, and next steps readers need."
+            placeholder="Include any additional context or instructions (optional)."
           ></textarea></label
         ><label
           >Attachment <span class="optional">(optional)</span
@@ -580,6 +579,13 @@
       </div>
       <h2 id="detailsTitle"></h2>
       <p id="detailsMeta" class="details-meta"></p>
+      <div class="notice-zoom-bar" id="noticeZoomBar">
+        <span class="zoom-label">Text Zoom:</span>
+        <button type="button" class="zoom-btn" id="noticeZoomOut" title="Zoom out">A-</button>
+        <span id="noticeZoomLevel" class="zoom-level">100%</span>
+        <button type="button" class="zoom-btn" id="noticeZoomIn" title="Zoom in">A+</button>
+        <button type="button" class="zoom-btn reset" id="noticeZoomReset" title="Reset zoom">Reset</button>
+      </div>
       <div id="detailsContent" class="details-content"></div>
       <div id="attachmentArea"></div>
       <div class="dialog-footer">

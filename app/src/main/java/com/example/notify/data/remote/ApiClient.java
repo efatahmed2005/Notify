@@ -78,6 +78,13 @@ public final class ApiClient {
   private static byte[] response(HttpURLConnection c) throws Exception {
     try {
       int code = c.getResponseCode();
+      java.util.List<String> cookieHeaders = c.getHeaderFields().get("Set-Cookie");
+      if (cookieHeaders != null) {
+        for (String cookie : cookieHeaders) {
+          CookieManager.getInstance().setCookie(baseUrl(), cookie);
+        }
+        CookieManager.getInstance().flush();
+      }
       InputStream stream =
         code >= 400 ? c.getErrorStream() : c.getInputStream();
       ByteArrayOutputStream output = new ByteArrayOutputStream();

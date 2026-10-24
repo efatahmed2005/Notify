@@ -205,8 +205,11 @@ async function openNotice(id) {
   $("detailsCategory").className =
     `category ${selected.category === "URGENT" ? "urgent" : ""}`;
   $("detailsMeta").textContent =
-    `${selected.author} | ${departments[selected.department]} | ${dateLabel(selected.created)}`;
-  $("detailsContent").textContent = selected.content;
+  $("detailsContent").textContent = selected.content || "";
+  const hasContent = Boolean(selected.content && selected.content.trim());
+  $("detailsContent").hidden = !hasContent;
+  if ($("noticeZoomBar")) $("noticeZoomBar").hidden = !hasContent;
+  applyNoticeWebZoom(100);
   $("attachmentArea").replaceChildren();
   if (selected.file) {
     const container = document.createElement("div");
@@ -255,8 +258,8 @@ $("composerForm").onsubmit = (event) => {
   Notify.submit(event.target, async () => {
     const title = $("noticeTitle").value.trim(),
       content = $("noticeContent").value.trim();
-    if (!title || !content)
-      throw new Error("Enter a title and notice details.");
+    if (!title)
+      throw new Error("Enter a notice title.");
     const body = new FormData();
     body.set("title", title);
     body.set("content", content);
@@ -310,6 +313,16 @@ $("copyNotice").onclick = async () => {
     message("Clipboard unavailable. Select the notice text to copy it.");
   }
 };
+let noticeWebZoom = 100;
+function applyNoticeWebZoom(val) {
+  noticeWebZoom = Math.min(220, Math.max(80, val));
+  if ($("detailsContent")) $("detailsContent").style.fontSize = `${(noticeWebZoom / 100) * 15}px`;
+  if ($("detailsTitle")) $("detailsTitle").style.fontSize = `${(noticeWebZoom / 100) * 20}px`;
+  if ($("noticeZoomLevel")) $("noticeZoomLevel").textContent = `${noticeWebZoom}%`;
+}
+if ($("noticeZoomIn")) $("noticeZoomIn").onclick = () => applyNoticeWebZoom(noticeWebZoom + 15);
+if ($("noticeZoomOut")) $("noticeZoomOut").onclick = () => applyNoticeWebZoom(noticeWebZoom - 15);
+if ($("noticeZoomReset")) $("noticeZoomReset").onclick = () => applyNoticeWebZoom(100);
 document
   .querySelectorAll(".close-dialog")
   .forEach(

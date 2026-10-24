@@ -23,6 +23,14 @@ public class NoticeDetailsActivity
   private MaterialButton btnDetailsOpenAttachment;
   private MaterialButton btnCopyNotice, btnShareNotice;
 
+  // Zoom controls
+  private View layoutNoticeZoom;
+  private MaterialButton btnNoticeZoomOut, btnNoticeZoomIn, btnNoticeZoomReset;
+  private TextView tvNoticeZoomLevel;
+  private int currentZoomPercent = 100;
+  private static final float BASE_DESC_SIZE_SP = 16f;
+  private static final float BASE_TITLE_SIZE_SP = 20f;
+
   private Notice notice;
 
   @Override
@@ -80,6 +88,12 @@ public class NoticeDetailsActivity
     btnCopyNotice = findViewById(R.id.btnCopyNotice);
     btnShareNotice = findViewById(R.id.btnShareNotice);
 
+    layoutNoticeZoom = findViewById(R.id.layoutNoticeZoom);
+    btnNoticeZoomOut = findViewById(R.id.btnNoticeZoomOut);
+    btnNoticeZoomIn = findViewById(R.id.btnNoticeZoomIn);
+    btnNoticeZoomReset = findViewById(R.id.btnNoticeZoomReset);
+    tvNoticeZoomLevel = findViewById(R.id.tvNoticeZoomLevel);
+
     cardDetailsAttachment = findViewById(R.id.cardDetailsAttachment);
     tvDetailsAttachmentName = findViewById(R.id.tvDetailsAttachmentName);
     tvDetailsAttachmentSize = findViewById(R.id.tvDetailsAttachmentSize);
@@ -97,6 +111,16 @@ public class NoticeDetailsActivity
     btnCopyNotice.setOnClickListener(v -> {
       if (notice != null) UiHelper.copyNoticeToClipboard(this, notice);
     });
+
+    if (btnNoticeZoomOut != null) {
+      btnNoticeZoomOut.setOnClickListener(v -> applyNoticeZoom(currentZoomPercent - 15));
+    }
+    if (btnNoticeZoomIn != null) {
+      btnNoticeZoomIn.setOnClickListener(v -> applyNoticeZoom(currentZoomPercent + 15));
+    }
+    if (btnNoticeZoomReset != null) {
+      btnNoticeZoomReset.setOnClickListener(v -> applyNoticeZoom(100));
+    }
 
     View.OnClickListener openDocListener = v -> {
       if (notice != null && notice.hasAttachment()) {
@@ -117,11 +141,35 @@ public class NoticeDetailsActivity
     }
   }
 
+  private void applyNoticeZoom(int percent) {
+    currentZoomPercent = Math.max(80, Math.min(220, percent));
+    float factor = currentZoomPercent / 100f;
+    tvDetailsDescription.setTextSize(
+      android.util.TypedValue.COMPLEX_UNIT_SP,
+      BASE_DESC_SIZE_SP * factor
+    );
+    tvDetailsTitle.setTextSize(
+      android.util.TypedValue.COMPLEX_UNIT_SP,
+      BASE_TITLE_SIZE_SP * factor
+    );
+    if (tvNoticeZoomLevel != null) {
+      tvNoticeZoomLevel.setText(currentZoomPercent + "%");
+    }
+  }
+
   private void bindNoticeData() {
     if (notice == null) return;
 
     tvDetailsTitle.setText(notice.getTitle());
-    tvDetailsDescription.setText(notice.getContent());
+    String content = notice.getContent();
+    if (content == null || content.trim().isEmpty()) {
+      tvDetailsDescription.setVisibility(View.GONE);
+      if (layoutNoticeZoom != null) layoutNoticeZoom.setVisibility(View.GONE);
+    } else {
+      tvDetailsDescription.setVisibility(View.VISIBLE);
+      tvDetailsDescription.setText(content);
+      if (layoutNoticeZoom != null) layoutNoticeZoom.setVisibility(View.VISIBLE);
+    }
     tvDetailsPublisher.setText("Published by: " + notice.getPublisherName());
     tvDetailsTarget.setText("Target: " + notice.getTargetAudience());
     tvDetailsTime.setText(DateUtils.formatFullDate(notice.getTimestamp()));

@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:background="@color/background">
 
     <!-- Top App Bar -->
@@ -153,6 +154,70 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Notice Zoom Controls Bar -->
+            <LinearLayout
+                android:id="@+id/layoutNoticeZoom"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_gravity="end"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_attachment_pill"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="4dp"
+                    android:text="Text Zoom:"
+                    android:textColor="@color/on_surface_subtle"
+                    android:textSize="11sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNoticeZoomOut"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:contentDescription="Zoom Out"
+                    android:text="A-"
+                    android:textSize="11sp"
+                    android:textColor="@color/primary"
+                    app:iconPadding="0dp" />
+
+                <TextView
+                    android:id="@+id/tvNoticeZoomLevel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="2dp"
+                    android:text="100%"
+                    android:textColor="@color/primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNoticeZoomIn"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:contentDescription="Zoom In"
+                    android:text="A+"
+                    android:textSize="11sp"
+                    android:textColor="@color/primary"
+                    app:iconPadding="0dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnNoticeZoomReset"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:contentDescription="Reset Zoom"
+                    android:text="1x"
+                    android:textSize="11sp"
+                    android:textColor="@color/on_surface_subtle"
+                    app:iconPadding="0dp" />
+            </LinearLayout>
+
             <!-- Full Notice Body -->
             <TextView
                 android:id="@+id/tvDetailsDescription"
@@ -194,20 +259,23 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical">
 
                         <TextView
                             android:id="@+id/tvDetailsAttachmentName"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text=""
                             android:textSize="14sp"
                             android:textStyle="bold"
-                            android:textColor="@color/on_surface" />
+                            android:textColor="@color/on_surface"
+                            android:maxLines="3"
+                            android:ellipsize="middle" />
 
                         <TextView
                             android:id="@+id/tvDetailsAttachmentSize"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text=""
                             android:textSize="12sp"
@@ -221,6 +289,8 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="View Document"
+                        android:minWidth="105dp"
+                        android:layout_marginStart="8dp"
                         app:cornerRadius="6dp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

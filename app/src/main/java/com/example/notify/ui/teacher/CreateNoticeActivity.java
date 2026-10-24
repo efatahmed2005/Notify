@@ -324,11 +324,6 @@ public class CreateNoticeActivity
         return;
       }
 
-      if (message.isEmpty()) {
-        etMessage.setError("Please enter notice details");
-        return;
-      }
-
       // Determine category
       Notice.Category category = Notice.Category.ANNOUNCEMENT;
       Notice.Urgency urgency = Notice.Urgency.NORMAL;
