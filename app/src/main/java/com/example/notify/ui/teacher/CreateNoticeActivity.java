@@ -35,7 +35,9 @@ public class CreateNoticeActivity
   private ChipGroup chipGroupCategory;
   private AutoCompleteTextView actvAudience;
   private TextInputEditText etTitle, etMessage;
-  private MaterialButton btnAttachDocument, btnSend;
+  private MaterialButton btnAttachDocument, btnAnalyzeDocument, btnSend;
+  private TextView tvDocumentAnalysis;
+  private int analysisGeneration;
 
   // Attachment controls
   private View layoutSelectedAttachment;
@@ -81,6 +83,8 @@ public class CreateNoticeActivity
     btnSend = findViewById(R.id.btnSend);
 
     btnAttachDocument = findViewById(R.id.btnAttachDocument);
+    btnAnalyzeDocument = findViewById(R.id.btnAnalyzeDocument);
+    tvDocumentAnalysis = findViewById(R.id.tvDocumentAnalysis);
     layoutSelectedAttachment = findViewById(R.id.layoutSelectedAttachment);
     ivSelectedAttachmentIcon = findViewById(R.id.ivSelectedAttachmentIcon);
     tvSelectedAttachmentName = findViewById(R.id.tvSelectedAttachmentName);
@@ -144,7 +148,7 @@ public class CreateNoticeActivity
     }
 
     String type = "pdf";
-    String lower = displayName.toLowerCase();
+    String lower = displayName.toLowerCase(Locale.ROOT);
     if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
       type = "docx";
     } else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
@@ -158,12 +162,11 @@ public class CreateNoticeActivity
         uri,
         displayName
       );
-    String finalUrl =
-      savedFile != null && savedFile.exists()
-        ? savedFile.getAbsolutePath()
-        : uri.toString();
-
-    setAttachedDocument(displayName, sizeStr, type, finalUrl);
+    if (savedFile == null || !savedFile.isFile()) {
+      Toast.makeText(this, "Could not read the selected file. Choose it again.", Toast.LENGTH_LONG).show();
+      return;
+    }
+    setAttachedDocument(displayName, sizeStr, type, savedFile.getAbsolutePath());
   }
 
   private void setAttachedDocument(
@@ -176,6 +179,8 @@ public class CreateNoticeActivity
     attachedFileSize = size;
     attachedFileType = type;
     attachedFileUrl = url;
+    btnAnalyzeDocument.setEnabled(true);
+    analyzeSelectedDocument(false);
 
     if (tvSelectedAttachmentName != null) {
       tvSelectedAttachmentName.setText(name + " (" + size + ")");
@@ -198,6 +203,49 @@ public class CreateNoticeActivity
 
   private void showAttachmentOptionsDialog() {
     launchStorageFilePicker();
+  }
+
+  private void analyzeSelectedDocument(boolean replace) {
+    final String path = attachedFileUrl;
+    final String name = attachedFileName;
+    final int generation = ++analysisGeneration;
+    if (path == null || name == null) return;
+    if (!name.toLowerCase(java.util.Locale.ROOT).matches(".*\\.(pdf|docx)")) {
+      tvDocumentAnalysis.setText("Enter a title for this document. Automatic wording supports PDF and DOCX.");
+      return;
+    }
+    btnAnalyzeDocument.setEnabled(false);
+    btnSend.setEnabled(false);
+    tvDocumentAnalysis.setText("Reading the document and finding the key notice details...");
+    com.example.notify.data.remote.ApiClient.async(
+      () -> com.example.notify.data.remote.ApiClient.analyzeDocument(new java.io.File(path), name),
+      new com.example.notify.data.remote.ApiClient.Callback<org.json.JSONObject>() {
+        public void success(org.json.JSONObject result) {
+          if (isFinishing() || generation != analysisGeneration) return;
+          btnAnalyzeDocument.setEnabled(true);
+          btnSend.setEnabled(!audienceIds.isEmpty());
+          String title = result.optString("title");
+          if (etTitle.getText() != null && (replace || etTitle.getText().toString().trim().isEmpty()) && !title.isEmpty()) etTitle.setText(title);
+          if (etMessage.getText() != null && (replace || etMessage.getText().toString().trim().isEmpty()) && !result.optString("summary").isEmpty()) etMessage.setText(result.optString("summary"));
+          if (chipGroupCategory.getCheckedChipId() == R.id.chipAnnouncement) {
+            if ("EXAM".equals(result.optString("category"))) chipGroupCategory.check(R.id.chipExam);
+            else if ("EVENT".equals(result.optString("category"))) chipGroupCategory.check(R.id.chipEvent);
+          }
+          org.json.JSONArray phrases = result.optJSONArray("keywords");
+          StringBuilder details = new StringBuilder(result.optString("warning"));
+          if (phrases != null && phrases.length() > 0) details.append(" Key information: ").append(phrases.optString(0));
+          String ocrWarning = result.optString("ocrWarning");
+          if (!ocrWarning.isEmpty()) details.append(" ").append(ocrWarning);
+          tvDocumentAnalysis.setText(details.toString());
+        }
+        public void error(Exception error) {
+          if (isFinishing() || generation != analysisGeneration) return;
+          btnAnalyzeDocument.setEnabled(true);
+          btnSend.setEnabled(!audienceIds.isEmpty());
+          tvDocumentAnalysis.setText("Could not analyze this file. Check it and enter a title yourself. " + error.getMessage());
+        }
+      }
+    );
   }
 
   private void launchStorageFilePicker() {
@@ -299,12 +347,17 @@ public class CreateNoticeActivity
 
     // Document Attachment Handling: Choose an original document from device storage
     btnAttachDocument.setOnClickListener(v -> showAttachmentOptionsDialog());
+    btnAnalyzeDocument.setOnClickListener(v -> analyzeSelectedDocument(true));
 
     btnRemoveAttachment.setOnClickListener(v -> {
+      analysisGeneration++;
       attachedFileName = null;
       attachedFileSize = null;
       attachedFileType = null;
       attachedFileUrl = null;
+      btnAnalyzeDocument.setEnabled(false);
+      tvDocumentAnalysis.setText("");
+      btnSend.setEnabled(!audienceIds.isEmpty());
       if (layoutSelectedAttachment != null) {
         layoutSelectedAttachment.setVisibility(View.GONE);
       }

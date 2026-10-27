@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
   private WebView portal;
   private MaterialButton nativeButton;
+  private MaterialButton configServerButton;
   private TextView errorText;
   private java.io.File pendingDownload;
   private ValueCallback<Uri[]> pendingFiles;
@@ -79,10 +80,16 @@ public class MainActivity extends AppCompatActivity {
       v.setPadding(0, Math.max(sb.top, 24), 0, 0);
       return insets;
     });
+    ApiClient.init(this);
     errorText = new TextView(this);
     errorText.setPadding(24, 16, 24, 16);
     errorText.setVisibility(View.GONE);
     layout.addView(errorText);
+    configServerButton = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
+    configServerButton.setText("Change Server URL / IP");
+    configServerButton.setVisibility(View.GONE);
+    configServerButton.setOnClickListener(v -> showServerConfigDialog());
+    layout.addView(configServerButton);
     portal = new WebView(this);
     layout.addView(portal, new LinearLayout.LayoutParams(-1, 0, 1));
     nativeButton = new MaterialButton(this);
@@ -228,20 +235,56 @@ public class MainActivity extends AppCompatActivity {
         }
       );
     });
+    loadPortal();
+  }
+
+  private void loadPortal() {
     String base = ApiClient.baseUrl();
     if (base.contains("example.invalid")) {
       showError(
-        "Notify server is not configured. Set NOTIFY_SERVER_URL and NOTIFY_SERVER_ORIGIN when building the app."
+        "Notify server is not configured. Set NOTIFY_SERVER_URL or tap 'Change Server URL / IP'."
       );
       nativeButton.setEnabled(false);
-    } else portal.loadUrl(
-      base +
-        (getIntent().getBooleanExtra("openClasses", false)
-          ? "/?view=classes"
-          : getIntent().getBooleanExtra("openAdministration", false)
-            ? "/?view=administration"
-            : "/")
-    );
+    } else {
+      nativeButton.setEnabled(true);
+      portal.loadUrl(
+        base +
+          (getIntent().getBooleanExtra("openClasses", false)
+            ? "/?view=classes"
+            : getIntent().getBooleanExtra("openAdministration", false)
+              ? "/?view=administration"
+              : "/")
+      );
+    }
+  }
+
+  private void showServerConfigDialog() {
+    final android.widget.EditText input = new android.widget.EditText(this);
+    input.setText(ApiClient.baseUrl());
+    input.setSingleLine(true);
+    input.setPadding(32, 24, 32, 24);
+
+    new androidx.appcompat.app.AlertDialog.Builder(this)
+      .setTitle("Configure Server URL")
+      .setMessage("Set the Notify server address:\n\n• Physical phone on Wi-Fi: http://10.49.70.80:8080\n• Android Studio emulator: http://10.0.2.2:8080")
+      .setView(input)
+      .setPositiveButton("Connect", (d, w) -> {
+        String url = input.getText().toString().trim();
+        if (!url.isEmpty()) {
+          ApiClient.setCustomBaseUrl(this, url);
+          errorText.setVisibility(View.GONE);
+          configServerButton.setVisibility(View.GONE);
+          loadPortal();
+        }
+      })
+      .setNeutralButton("Use Emulator IP (10.0.2.2)", (d, w) -> {
+        ApiClient.setCustomBaseUrl(this, "http://10.0.2.2:8080");
+        errorText.setVisibility(View.GONE);
+        configServerButton.setVisibility(View.GONE);
+        loadPortal();
+      })
+      .setNegativeButton("Cancel", null)
+      .show();
   }
 
   private void launchNativeDashboard(User user) {
@@ -266,8 +309,11 @@ public class MainActivity extends AppCompatActivity {
   }
 
   private void showError(String message) {
-    errorText.setText(message);
+    errorText.setText(message + "\n(Target: " + ApiClient.baseUrl() + ")");
     errorText.setVisibility(View.VISIBLE);
+    if (configServerButton != null) {
+      configServerButton.setVisibility(View.VISIBLE);
+    }
   }
 
   @Override

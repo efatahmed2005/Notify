@@ -12,7 +12,7 @@ Notify is a university notice management system that helps students and teachers
 - **Department head responsibilities:** Approved teachers can manage department notices where they have been appointed as head, using their existing teacher account.
 - **Notice publishing:** Authorized users can create drafts, publish notices, attach documents, and archive older announcements.
 - **Search and filtering:** Users can find notices by searching or browsing categories.
-- **Document reading:** PDF, Word, and Excel uploads keep their original files. Documents have page previews, with OCR for scanned text and an in-app Android PDF reader.
+- **Document reading:** PDF, Word, and Excel uploads keep their original files. PDF and DOCX notices can suggest titles and key details from document text, including OCR on scanned pages. Documents have page previews and an in-app Android PDF reader.
 - **Document access and sharing:** Users can download original attachments and copy or share notice content.
 - **Role-based access:** Students, teachers, and administrators have access to the features and notices relevant to their accounts.
 - **Web and Android access:** A responsive web interface and native Android notice screens support everyday use, with light and dark themes.

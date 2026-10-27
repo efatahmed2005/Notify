@@ -20,7 +20,7 @@
         groups
           .map(
             (g) =>
-              `<article class="management-card"><h3>${e(g.label)}</h3><p>${e(g.department_name)} ? ${g.memberCount} students ? ${g.active ? "Active" : "Inactive"}</p>${user.role === "STUDENT" ? `<form data-action="${g.joined ? "leave" : "join"}" data-id="${e(g.id)}"><p role="alert" class="form-error"></p><button type="submit" class="button ${g.joined ? "secondary" : "primary"}">${g.joined ? "Leave class" : "Join class"}</button></form>` : ""}${g.canManage ? `<form data-action="edit" data-id="${e(g.id)}"><div class="form-row"><label>Batch<input name="batch" value="${e(g.batch)}" required maxlength="40"></label><label>Class<input name="className" value="${e(g.class_name)}" required maxlength="80"></label><label>Section<input name="section" value="${e(g.section)}" required maxlength="30"></label></div><label>Availability<select name="active"><option value="true" ${g.active ? "selected" : ""}>Active</option><option value="false" ${!g.active ? "selected" : ""}>Inactive</option></select></label><p role="alert" class="form-error"></p><button type="submit" class="button secondary">Save class</button></form>` : ""}</article>`,
+              `<article class="management-card"><h3>${e(g.label)}</h3><p>${e(g.department_name)} · ${g.memberCount} students · ${g.active ? "Active" : "Inactive"}</p>${user.role === "STUDENT" ? `<form data-action="${g.joined ? "leave" : "join"}" data-id="${e(g.id)}"><p role="alert" class="form-error"></p><button type="submit" class="button ${g.joined ? "secondary" : "primary"}">${g.joined ? "Leave class" : "Join class"}</button></form>` : ""}${g.canManage ? `<form data-action="edit" data-id="${e(g.id)}"><div class="form-row"><label>Batch<input name="batch" value="${e(g.batch)}" required maxlength="40"></label><label>Class<input name="className" value="${e(g.class_name)}" required maxlength="80"></label><label>Section<input name="section" value="${e(g.section)}" required maxlength="30"></label></div><label>Availability<select name="active"><option value="true" ${g.active ? "selected" : ""}>Active</option><option value="false" ${!g.active ? "selected" : ""}>Inactive</option></select></label><p role="alert" class="form-error"></p><button type="submit" class="button secondary">Save class</button></form>` : ""}</article>`,
           )
           .join("") || "<p>No class groups are available yet.</p>";
   }
@@ -29,7 +29,8 @@
       window.closeMenu?.();
       $("groupsDialog")?.showModal?.();
       if ($("groupsError")) $("groupsError").textContent = "";
-      if ($("groupsContent")) $("groupsContent").textContent = "Loading classes...";
+      if ($("groupsContent"))
+        $("groupsContent").textContent = "Loading classes...";
       try {
         await load();
       } catch (error) {

@@ -14,11 +14,12 @@ let notices = [],
   category = "ALL",
   selected = null,
   editing = null,
+  analysisGeneration = 0,
   toastTimer;
 const canWrite = () =>
   profile?.status === "APPROVED" &&
   (profile.role === "ADMIN" ||
-    (profile.role === "TEACHER" && profile.headDepartmentIds?.length > 0));
+    (profile.role === "TEACHER" && profile.departments?.length > 0));
 function message(text) {
   $("toast").textContent = text;
   $("toast").hidden = false;
@@ -93,7 +94,21 @@ function render() {
   $("noticeList").innerHTML = visible
     .map(
       (n) =>
-        `<article class="notice-row"><div class="notice-main"><span class="category ${n.category === "URGENT" ? "urgent" : ""}">${categories[n.category]}</span><h3><button class="notice-link" data-id="${escapeHTML(n.id)}">${escapeHTML(n.title)}</button></h3><p>${escapeHTML(n.content)}</p><div class="notice-meta"><span>${escapeHTML(n.author)}</span><span>${escapeHTML(departments[n.department] || "Department")}</span><span>${escapeHTML(n.audience)}</span><span>${escapeHTML(n.status)}</span>${n.file ? "<span>Attachment included</span>" : ""}</div></div><time class="notice-date" datetime="${new Date(n.created).toISOString()}">${dateLabel(n.created)}</time></article>`,
+        `<article class="notice-row"><div class="notice-main"><span class="category ${n.category === "URGENT" ? "urgent" : ""}">${categories[n.category]}</span><h3><button class="notice-link" data-id="${escapeHTML(n.id)}">${escapeHTML(n.title)}</button></h3>${n.content && n.content !== n.title ? `<p>${escapeHTML(n.content)}</p>` : ""}${(
+          n.keywords || []
+        )
+          .filter(
+            (phrase) =>
+              phrase !== n.title && !(n.content || "").includes(phrase),
+          )
+          .slice(0, 2)
+          .map(
+            (phrase) =>
+              `<p class="notice-key-phrase">${escapeHTML(phrase)}</p>`,
+          )
+          .join(
+            "",
+          )}<div class="notice-meta"><span>${escapeHTML(n.author)}</span><span>${escapeHTML(departments[n.department] || "Department")}</span><span>${escapeHTML(n.audience)}</span><span>${escapeHTML(n.status)}</span>${n.file ? "<span>Read attached document</span>" : ""}</div></div><time class="notice-date" datetime="${new Date(n.created).toISOString()}">${dateLabel(n.created)}</time></article>`,
     )
     .join("");
   $("emptyState").hidden = visible.length > 0;
@@ -163,8 +178,13 @@ function applyProfile() {
 function openComposer(notice = null) {
   if (!canWrite()) return;
   editing = notice;
+  analysisGeneration++;
   $("composerForm").reset();
   $("composerError").textContent = "";
+  $("noticeAnalysisStatus").textContent = "";
+  $("reanalyzeNotice").hidden =
+    !notice?.file || !/\.(pdf|docx)$/i.test(notice.file.name);
+  $("saveNotice").disabled = false;
   $("composerTitle").textContent = notice ? "Edit notice" : "New notice";
   $("noticeDepartment").innerHTML = audiences
     .map(
@@ -205,8 +225,11 @@ async function openNotice(id) {
   $("detailsCategory").className =
     `category ${selected.category === "URGENT" ? "urgent" : ""}`;
   $("detailsMeta").textContent =
+    `${selected.author} · ${departments[selected.department] || "Department"} · ${dateLabel(selected.created)}`;
   $("detailsContent").textContent = selected.content || "";
-  const hasContent = Boolean(selected.content && selected.content.trim());
+  const hasContent = Boolean(
+    selected.content && selected.content.trim() !== selected.title.trim(),
+  );
   $("detailsContent").hidden = !hasContent;
   if ($("noticeZoomBar")) $("noticeZoomBar").hidden = !hasContent;
   applyNoticeWebZoom(100);
@@ -229,6 +252,12 @@ async function openNotice(id) {
     preview.textContent = "View Document";
     preview.onclick = () => window.openDocument(selected);
     container.append(preview);
+    const download = document.createElement("a");
+    download.className = "button secondary";
+    download.textContent = "Download original";
+    download.href = `/api/notices/${encodeURIComponent(selected.id)}/attachment`;
+    download.download = selected.file.name;
+    container.append(download);
     $("attachmentArea").append(container);
   }
   const editable = selected.canManage;
@@ -253,13 +282,66 @@ $("noticeList").addEventListener("click", (event) => {
 $("workspaceButton").onclick = openAccount;
 $("changeView").onclick = openAccount;
 $("newNotice").onclick = () => openComposer();
+async function analyzeSelectedDocument(event) {
+  const file = $("noticeFile").files[0],
+    generation = ++analysisGeneration,
+    existingFile = !file && editing?.file,
+    replace = event?.type === "click";
+  const supported = /\.(pdf|docx)$/i.test(
+    file?.name || existingFile?.name || "",
+  );
+  $("reanalyzeNotice").hidden = !supported;
+  if (!file && !existingFile) {
+    $("noticeAnalysisStatus").textContent = "";
+    return;
+  }
+  if (!supported) {
+    $("noticeAnalysisStatus").textContent =
+      "Automatic notice wording is available for PDF and DOCX. Enter a title for this file.";
+    return;
+  }
+  $("saveNotice").disabled = true;
+  $("noticeAnalysisStatus").textContent =
+    "Reading the document and extracting notice details…";
+  try {
+    const body = new FormData();
+    if (file) body.set("file", file);
+    const result = await Notify.request(
+      file ? "/notices/analyze" : `/notices/${editing.id}/analyze`,
+      { method: "POST", body: file ? body : {} },
+    );
+    if (generation !== analysisGeneration || !$("composerDialog").open) return;
+    if (result.title && (replace || !$("noticeTitle").value.trim()))
+      $("noticeTitle").value = result.title;
+    if (result.summary && (replace || !$("noticeContent").value.trim()))
+      $("noticeContent").value = result.summary;
+    if ($("noticeCategory").value === "ANNOUNCEMENT" && result.category)
+      $("noticeCategory").value = result.category;
+    $("noticeAnalysisStatus").textContent = [
+      result.warning,
+      result.ocrWarning,
+      result.keywords?.length
+        ? `Key information: ${result.keywords.join(" | ")}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  } catch (error) {
+    if (generation === analysisGeneration)
+      $("noticeAnalysisStatus").textContent =
+        `${error.message} Enter the title yourself if you want to use this file.`;
+  } finally {
+    if (generation === analysisGeneration) $("saveNotice").disabled = false;
+  }
+}
+$("noticeFile").addEventListener("change", analyzeSelectedDocument);
+$("reanalyzeNotice").onclick = analyzeSelectedDocument;
 $("composerForm").onsubmit = (event) => {
   event.preventDefault();
   Notify.submit(event.target, async () => {
     const title = $("noticeTitle").value.trim(),
       content = $("noticeContent").value.trim();
-    if (!title)
-      throw new Error("Enter a notice title.");
+    if (!title) throw new Error("Enter a notice title.");
     const body = new FormData();
     body.set("title", title);
     body.set("content", content);
@@ -316,13 +398,19 @@ $("copyNotice").onclick = async () => {
 let noticeWebZoom = 100;
 function applyNoticeWebZoom(val) {
   noticeWebZoom = Math.min(220, Math.max(80, val));
-  if ($("detailsContent")) $("detailsContent").style.fontSize = `${(noticeWebZoom / 100) * 15}px`;
-  if ($("detailsTitle")) $("detailsTitle").style.fontSize = `${(noticeWebZoom / 100) * 20}px`;
-  if ($("noticeZoomLevel")) $("noticeZoomLevel").textContent = `${noticeWebZoom}%`;
+  if ($("detailsContent"))
+    $("detailsContent").style.fontSize = `${(noticeWebZoom / 100) * 15}px`;
+  if ($("detailsTitle"))
+    $("detailsTitle").style.fontSize = `${(noticeWebZoom / 100) * 20}px`;
+  if ($("noticeZoomLevel"))
+    $("noticeZoomLevel").textContent = `${noticeWebZoom}%`;
 }
-if ($("noticeZoomIn")) $("noticeZoomIn").onclick = () => applyNoticeWebZoom(noticeWebZoom + 15);
-if ($("noticeZoomOut")) $("noticeZoomOut").onclick = () => applyNoticeWebZoom(noticeWebZoom - 15);
-if ($("noticeZoomReset")) $("noticeZoomReset").onclick = () => applyNoticeWebZoom(100);
+if ($("noticeZoomIn"))
+  $("noticeZoomIn").onclick = () => applyNoticeWebZoom(noticeWebZoom + 15);
+if ($("noticeZoomOut"))
+  $("noticeZoomOut").onclick = () => applyNoticeWebZoom(noticeWebZoom - 15);
+if ($("noticeZoomReset"))
+  $("noticeZoomReset").onclick = () => applyNoticeWebZoom(100);
 document
   .querySelectorAll(".close-dialog")
   .forEach(

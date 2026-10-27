@@ -11,7 +11,7 @@
     "setup:admin": "node --env-file-if-exists=.env server/setup.js",
     "recover:admin": "node --env-file-if-exists=.env server/setup.js --recover",
     "test": "node --test server/test/*.test.js",
-    "check": "node --check server/app.js && node --check server/groups.js && node --check server/documents.js && node --check web/api.js && node --check web/app.js && node --check web/auth.js && node --check web/manage.js && node --check web/groups.js && node --check web/documents.js",
+    "check": "node --check server/app.js && node --check server/groups.js && node --check server/documents.js && node --check server/notice-analysis.js && node --check web/api.js && node --check web/app.js && node --check web/auth.js && node --check web/manage.js && node --check web/groups.js && node --check web/documents.js",
     "test:browser": "node test/browser.test.js",
     "test:documents": "node --env-file-if-exists=.env test/documents.test.js"
   },

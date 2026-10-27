@@ -34,7 +34,47 @@ public final class ApiClient {
   public static volatile User currentUser;
   private static volatile String csrf = "";
 
+  private static volatile String customBaseUrl = null;
+
+  public static void init(Context context) {
+    if (context != null && customBaseUrl == null) {
+      String saved = context.getSharedPreferences("notify_prefs", Context.MODE_PRIVATE)
+          .getString("server_url", null);
+      if (saved != null && !saved.trim().isEmpty()) {
+        customBaseUrl = saved.trim().replaceAll("/+$", "");
+      } else if (isEmulator()) {
+        customBaseUrl = "http://10.0.2.2:8080";
+      }
+    }
+  }
+
+  public static void setCustomBaseUrl(Context context, String url) {
+    if (url != null && !url.trim().isEmpty()) {
+      customBaseUrl = url.trim().replaceAll("/+$", "");
+      if (context != null) {
+        context.getSharedPreferences("notify_prefs", Context.MODE_PRIVATE)
+            .edit()
+            .putString("server_url", customBaseUrl)
+            .apply();
+      }
+    }
+  }
+
+  public static boolean isEmulator() {
+    return android.os.Build.FINGERPRINT.startsWith("generic")
+        || android.os.Build.FINGERPRINT.startsWith("unknown")
+        || android.os.Build.MODEL.contains("google_sdk")
+        || android.os.Build.MODEL.contains("Emulator")
+        || android.os.Build.MODEL.contains("Android SDK built for x86")
+        || android.os.Build.MANUFACTURER.contains("Genymotion")
+        || (android.os.Build.BRAND.startsWith("generic") && android.os.Build.DEVICE.startsWith("generic"))
+        || "google_sdk".equals(android.os.Build.PRODUCT);
+  }
+
   public static String baseUrl() {
+    if (customBaseUrl != null && !customBaseUrl.isEmpty()) {
+      return customBaseUrl;
+    }
     return BuildConfig.NOTIFY_SERVER_URL.replaceAll("/+$", "");
   }
 
@@ -66,7 +106,7 @@ public final class ApiClient {
     c.setConnectTimeout(15000);
     c.setReadTimeout(30000);
     c.setRequestMethod(method);
-    c.setRequestProperty("Origin", BuildConfig.NOTIFY_SERVER_ORIGIN);
+    c.setRequestProperty("Origin", base.getProtocol() + "://" + base.getAuthority());
     String cookies = CookieManager.getInstance().getCookie(baseUrl());
     if (cookies != null) c.setRequestProperty("Cookie", cookies);
     c.setRequestProperty("X-CSRF-Token", csrf);
@@ -170,14 +210,25 @@ public final class ApiClient {
 
   public static JSONObject publish(JSONObject fields, File file, String name)
     throws Exception {
+    return sendMultipart("/api/notices", fields, file, name);
+  }
+
+  public static JSONObject analyzeDocument(File file, String name) throws Exception {
+    if (file == null || !file.isFile()) throw new IOException("Choose a document first.");
+    return sendMultipart("/api/notices/analyze", new JSONObject(), file, name);
+  }
+
+  private static JSONObject sendMultipart(String path, JSONObject fields, File file, String name)
+    throws Exception {
     refreshSession();
     String boundary = "Notify" + java.util.UUID.randomUUID();
     HttpURLConnection c = connection(
-      "/api/notices",
+      path,
       "POST",
       "multipart/form-data; boundary=" + boundary
     );
     c.setDoOutput(true);
+    if ("/api/notices/analyze".equals(path)) c.setReadTimeout(180000);
     c.setChunkedStreamingMode(16384);
     try (OutputStream out = c.getOutputStream()) {
       java.util.Iterator<String> keys = fields.keys();

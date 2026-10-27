@@ -7,9 +7,79 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { transaction } from "./db.js";
+import { analyzeNoticeText } from "./notice-analysis.js";
 const run = promisify(execFile);
 export const sourceHash = (data) =>
   createHash("sha256").update(data).digest("hex");
+function documentRuntime(env) {
+  const repoRoot = fileURLToPath(new URL("../", import.meta.url));
+  const localPython = join(
+    repoRoot,
+    "var/document-tools/python/Scripts/python.exe",
+  );
+  const localLibreOffice = join(
+    repoRoot,
+    "var/document-tools/libreoffice/program/soffice.exe",
+  );
+  const pythonBin =
+    env.DOCUMENT_PYTHON && existsSync(env.DOCUMENT_PYTHON)
+      ? env.DOCUMENT_PYTHON
+      : existsSync(localPython)
+        ? localPython
+        : "python";
+  const librePath =
+    env.LIBREOFFICE_PATH && existsSync(env.LIBREOFFICE_PATH)
+      ? env.LIBREOFFICE_PATH
+      : existsSync(localLibreOffice)
+        ? localLibreOffice
+        : undefined;
+  return {
+    pythonBin,
+    runEnv: {
+      ...env,
+      DOCUMENT_PYTHON: pythonBin,
+      ...(librePath ? { LIBREOFFICE_PATH: librePath } : {}),
+    },
+  };
+}
+
+export async function analyzeUpload(file, env = process.env) {
+  const { pythonBin, runEnv } = documentRuntime(env);
+  const directory = await mkdtemp(join(tmpdir(), "notify-analysis-"));
+  try {
+    const source = join(
+      directory,
+      "original" + extname(file.originalname).toLowerCase(),
+    );
+    await writeFile(source, file.buffer);
+    await run(
+      pythonBin,
+      [
+        fileURLToPath(new URL("./document_worker.py", import.meta.url)),
+        source,
+        directory,
+        "--text-only",
+      ],
+      {
+        env: runEnv,
+        timeout: 180000,
+        maxBuffer: 1024 * 1024,
+        windowsHide: true,
+      },
+    );
+    const result = JSON.parse(
+      await readFile(join(directory, "result.json"), "utf8"),
+    );
+    const analysis = analyzeNoticeText(result.text);
+    return {
+      ...analysis,
+      ocrWarning: result.warning,
+      textSample: String(result.text || "").slice(0, 700),
+    };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
 export function queueDocument(db, id) {
   const file = db
     .prepare("SELECT data FROM attachments WHERE notice_id=?")
@@ -24,23 +94,7 @@ export async function processDocument(db, file, env = process.env) {
   const hash = sourceHash(file.data);
   let directory;
   try {
-    const repoRoot = fileURLToPath(new URL("../", import.meta.url));
-    const localPython = join(repoRoot, "var/document-tools/python/Scripts/python.exe");
-    const localLibreOffice = join(repoRoot, "var/document-tools/libreoffice/program/soffice.exe");
-
-    const pythonBin = (env.DOCUMENT_PYTHON && existsSync(env.DOCUMENT_PYTHON))
-      ? env.DOCUMENT_PYTHON
-      : (existsSync(localPython) ? localPython : "python");
-
-    const librePath = (env.LIBREOFFICE_PATH && existsSync(env.LIBREOFFICE_PATH))
-      ? env.LIBREOFFICE_PATH
-      : (existsSync(localLibreOffice) ? localLibreOffice : undefined);
-
-    const runEnv = {
-      ...env,
-      DOCUMENT_PYTHON: pythonBin,
-      ...(librePath ? { LIBREOFFICE_PATH: librePath } : {}),
-    };
+    const { pythonBin, runEnv } = documentRuntime(env);
 
     directory = await mkdtemp(join(tmpdir(), "notify-document-"));
     const source = join(
@@ -55,11 +109,17 @@ export async function processDocument(db, file, env = process.env) {
         source,
         directory,
       ],
-      { env: runEnv, timeout: 180000, maxBuffer: 1024 * 1024, windowsHide: true },
+      {
+        env: runEnv,
+        timeout: 180000,
+        maxBuffer: 1024 * 1024,
+        windowsHide: true,
+      },
     );
     const result = JSON.parse(
       await readFile(join(directory, "result.json"), "utf8"),
     );
+    const analysis = analyzeNoticeText(result.text);
     const pdf = await readFile(result.pdf),
       pages = [];
     if (
@@ -92,11 +152,23 @@ export async function processDocument(db, file, env = process.env) {
           .run(file.notice_id, i + 1, image),
       );
       db.prepare(
-        "UPDATE document_previews SET status='READY',pdf=?,extracted_text=?,error=?,updated_at=? WHERE notice_id=? AND source_hash=?",
-      ).run(pdf, result.text, result.warning, Date.now(), file.notice_id, hash);
+        "UPDATE document_previews SET status='READY',pdf=?,extracted_text=?,error=?,suggested_title=?,key_phrases=?,updated_at=? WHERE notice_id=? AND source_hash=?",
+      ).run(
+        pdf,
+        result.text,
+        result.warning,
+        analysis.title,
+        JSON.stringify(analysis.keywords),
+        Date.now(),
+        file.notice_id,
+        hash,
+      );
     });
   } catch (error) {
-    console.error("Document preview error for notice " + file.notice_id + ":", error.message);
+    console.error(
+      "Document preview error for notice " + file.notice_id + ":",
+      error.message,
+    );
     db.prepare(
       "UPDATE document_previews SET status='FAILED',error=?,updated_at=? WHERE notice_id=? AND source_hash=?",
     ).run(

@@ -240,6 +240,23 @@
                         android:contentDescription="Remove Attachment"
                         app:tint="@color/on_surface_subtle" />
                 </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAnalyzeDocument"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                      android:text="Reanalyze and replace suggestions"
+                    android:enabled="false"
+                    app:cornerRadius="6dp" />
+                <TextView
+                    android:id="@+id/tvDocumentAnalysis"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/on_surface_subtle"
+                    android:textSize="12sp"
+                    android:accessibilityLiveRegion="polite" />
             </LinearLayout>
 
             <com.google.android.material.checkbox.MaterialCheckBox

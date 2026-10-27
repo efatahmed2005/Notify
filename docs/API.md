@@ -39,6 +39,8 @@ Android uses the same API and session. Native transport fetches `/session` befor
 | `DELETE /groups/:id/membership`         | Student leaves their own membership; empty body                                                            |
 | `GET /audiences`                        | Current permitted publishing choices for admin/teachers, including class IDs and broadcast scope           |
 | `GET /notices/:id/document`             | Current notice reader; preview status, page count, and processing warning                                  |
+| `POST /notices/analyze`                  | Approved teacher or admin; multipart PDF/DOCX `file`, returning reviewable title, summary, and key phrases without publishing |
+| `POST /notices/:id/analyze`              | Current notice manager; reanalyzes the stored PDF/DOCX without changing or publishing the notice |
 | `GET /notices/:id/document/pages/:page` | Current notice reader; rendered PNG page                                                                   |
 | `GET /notices/:id/document/pdf`         | Current notice reader; original PDF or converted Office PDF                                                |
 | `POST /notices/:id/document/retry`      | Current notice manager; rate-limited processing retry                                                      |
@@ -46,3 +48,5 @@ Android uses the same API and session. Native transport fetches `/session` befor
 The student endpoint also accepts `{identifier}` where the value is an 11-digit ID or its official email. In unverified development mode, first-time registration adds `name` and `departmentId`; the backend fixes the role to STUDENT. An existing identity with registration fields returns 409. Later sign-ins use only `identifier` and cannot change department. IDs and emails normalize to one unique database identity. This flow provides no identity verification and cannot prevent someone entering another student's ID.
 
 A student leaving a class immediately loses access to that class's notices, original files, previews, OCR text, and rendered pages. Department transfers clear class memberships and revoke sessions. Teachers can see published class notices in their assigned departments, but cannot manage another author's notice without the department-head assignment.
+
+Notice list entries may include `keywords` extracted from a ready document preview. They are display hints, not trusted notice metadata or a substitute for the author's reviewed title. The analysis endpoint accepts one file up to 25 MiB, applies the normal session, CSRF, origin, approval, and upload checks, and is rate-limited. PDF/DOCX OCR or conversion can take time; on failure, authors can enter the notice details manually.

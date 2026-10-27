@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { openDatabase } from "../server/db.js";
 import { createApp } from "../server/app.js";
 import { hashPassword } from "../server/security.js";
+import { analyzeNoticeText } from "../server/notice-analysis.js";
 mkdirSync(".temp/design-check", { recursive: true });
 const db = openDatabase(":memory:"),
   password = "Browser test passphrase 493!";
@@ -20,6 +21,10 @@ const app = await createApp({
   origin,
   secret: "browser-test-only-secret-more-than-32-characters",
   provisional: true,
+  analyzeDocument: async () =>
+    analyzeNoticeText(
+      "University will be closed from 4 October to 21 October.",
+    ),
 });
 server.on("request", app);
 const chrome =
@@ -37,7 +42,7 @@ const browser = await chromium
 try {
   const failurePage = await browser.newPage();
   const failureErrors = [];
-  failurePage.on("pageerror", (error) => failureErrors.push(error.message));
+  failurePage.on("pageerror", (error) => failureErrors.push(error.stack));
   for (const failure of [
     {
       status: 200,
@@ -109,6 +114,7 @@ try {
   await admin.locator("#staffLoginForm button[type=submit]").click();
   await admin.locator("#manageButton").waitFor({ state: "visible" });
   await admin.locator("#manageButton").click();
+  await admin.locator("[data-manage-tab=departments]").click();
   for (const code of ["CSE", "EEE"]) {
     const form = admin.locator("[data-action=create-department]");
     await form.locator("[name=code]").fill(code);
@@ -149,9 +155,9 @@ try {
   });
   await admin.locator("#manageButton").click();
   await admin.locator("[data-manage-tab=teachers]").click();
-  const decision = admin.locator("[data-action=account-status]");
-  await decision.locator("[name=status]").selectOption("APPROVED");
-  await decision.locator("button[type=submit]").click();
+  await admin
+    .locator("[data-action=quick-approve] button[type=submit]")
+    .click();
   const assign = admin.locator("[data-action=assign-departments]");
   await assign
     .locator("[name=departmentIds]")
@@ -165,16 +171,6 @@ try {
     path: ".temp/design-check/admin.png",
     fullPage: true,
   });
-  await admin.locator("[data-manage-tab=students]").click();
-  const directory = admin.locator("[data-action=create-student]");
-  await directory.locator("[name=studentId]").fill("20242024010");
-  await directory.locator("[name=email]").fill("20242024010@nwu.ac.bd");
-  await directory.locator("[name=name]").fill("Test Student");
-  await directory
-    .locator("[name=departmentId]")
-    .selectOption(departments[0].id);
-  await directory.locator("button[type=submit]").click();
-  await admin.locator(".user-record").waitFor();
   await admin.locator("#manageDialog .close-dialog").click();
   await admin.locator("#groupsButton").click();
   const classForm = admin.locator('#groupsContent [data-action="create"]');
@@ -198,10 +194,6 @@ try {
   await teacher.locator("#staffLoginForm button[type=submit]").click();
   await teacher.locator("#newNotice").waitFor({ state: "visible" });
   await teacher.locator("#newNotice").click();
-  await teacher.locator("#noticeTitle").fill("Department schedule");
-  await teacher
-    .locator("#noticeContent")
-    .fill("Published test notice for the assigned department.");
   await teacher.locator("#noticeStatus").selectOption("PUBLISHED");
   await teacher.locator("#noticeDepartment").selectOption(classId);
   await teacher.locator("#noticeFile").setInputFiles({
@@ -209,6 +201,20 @@ try {
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4\nTest file"),
   });
+  await teacher.locator("#noticeTitle").waitFor({ state: "visible" });
+  await teacher.waitForFunction(() =>
+    document
+      .querySelector("#noticeTitle")
+      .value.includes("closed from 4 October to 21 October"),
+  );
+  assert.match(
+    await teacher.locator("#noticeContent").inputValue(),
+    /closed from 4 October/,
+  );
+  assert.match(
+    await teacher.locator("#noticeAnalysisStatus").textContent(),
+    /Key information/,
+  );
   await teacher.locator("#saveNotice").click();
   await teacher.locator(".notice-row").waitFor();
   const student = await browser.newPage({
@@ -218,6 +224,9 @@ try {
   student.on("pageerror", (e) => errors.push(e.message));
   await student.goto(origin);
   await student.locator("#studentIdentifier").fill("20242024010");
+  await student.locator("#studentRegistration summary").click();
+  await student.locator("#studentName").fill("Test Student");
+  await student.locator("#studentDepartment").selectOption(departments[0].id);
   await student.locator("#studentLoginForm button[type=submit]").click();
   await student.locator("#appLayout").waitFor({ state: "visible" });
   assert.equal(await student.locator(".notice-row").count(), 0);
@@ -242,6 +251,9 @@ try {
   const download = student.waitForEvent("download");
   await student.locator("#attachmentArea a").click();
   assert.equal((await download).suggestedFilename(), "schedule.pdf");
+  await student.locator("#attachmentArea button").click();
+  await student.locator("#documentDialog").waitFor({ state: "visible" });
+  await student.locator("#documentDialog .close-dialog").click();
   assert.equal(await student.locator("#editNotice").isVisible(), false);
   await student.locator("#detailsDialog .close-dialog").click();
   await student.evaluate(() =>
@@ -267,6 +279,18 @@ try {
   );
   await teacher.locator(".notice-link").click();
   await teacher.locator("#editNotice").click();
+  await teacher.locator("#noticeTitle").fill("Outdated title");
+  await teacher.locator("#noticeContent").fill("Outdated summary");
+  await teacher.locator("#reanalyzeNotice").click();
+  await teacher.waitForFunction(() =>
+    document
+      .querySelector("#noticeTitle")
+      .value.includes("closed from 4 October"),
+  );
+  assert.match(
+    await teacher.locator("#noticeContent").inputValue(),
+    /closed from 4 October/,
+  );
   await teacher.locator("#noticeStatus").selectOption("ARCHIVED");
   await teacher.locator("#saveNotice").click();
   await teacher.locator("#composerDialog").waitFor({ state: "hidden" });
@@ -291,7 +315,7 @@ try {
   await newcomer.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS browser: admin departments, teacher registration/approval, multiple assignments, head assignment, directory provisioning, student self-enrollment, class creation/joining, class-targeted publishing/archival, authorized attachment, student isolation, storage tampering, and mobile layout.",
+    "PASS browser: admin departments, teacher approval, head assignment, student enrollment, class publishing, document opening, access control, and mobile layout.",
   );
 } finally {
   await browser.close();

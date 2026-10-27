@@ -14,6 +14,7 @@ export function openDatabase(filename) {
   for (const [version, filename] of [
     [1, "001_initial.sql"],
     [2, "002_class_groups.sql"],
+    [3, "003_document_suggestions.sql"],
   ]) {
     if (
       !db

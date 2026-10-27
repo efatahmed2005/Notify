@@ -8,6 +8,44 @@ image=page.get_pixmap(matrix=pymupdf.Matrix(2,2)).tobytes('png')
 second=original.new_page(width=600,height=400);second.insert_text((40,90),'SECOND PAGE - Complete exam instructions',fontsize=20)
 original.save(root/'digital.pdf')
 scan=pymupdf.open();page=scan.new_page(width=600,height=400);page.insert_image(page.rect,stream=image);scan.save(root/'scanned.pdf');scan.close();original.close()
+long_notice=pymupdf.open();page=long_notice.new_page(width=700,height=850)
+for number, line in enumerate([
+    'NORTH WESTERN UNIVERSITY',
+    'DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING',
+    'Notice Regarding',
+    'Thesis Defense',
+    'The Thesis Defense Board for CSE-4100 and CSE-4200 will be held on',
+    '6 October 2026, from 9:45 AM in Rooms 702 and 704.',
+    'Students must complete their presentation and final report.',
+    'All students must clear outstanding dues by 30 September 2026.',
+    'Students who fail to clear dues cannot appear before the Board.',
+    'CC:',
+    '1. Registrar, NWU',
+]):
+    page.insert_text((40, 70 + number * 28), line, fontsize=14)
+image=page.get_pixmap(matrix=pymupdf.Matrix(2,2)).tobytes('png')
+long_notice.close();scan=pymupdf.open();page=scan.new_page(width=700,height=850)
+page.insert_image(page.rect,stream=image);scan.save(root/'long-scanned.pdf');scan.close()
+admit=pymupdf.open();page=admit.new_page(width=600,height=700)
+page.draw_rect(page.rect,fill=(0.78,0.78,0.78),color=None)
+for number,line in enumerate([
+    'Office of the Controller of Examinations',
+    'Notice Regarding Issue of Admit Card',
+    'Registration is open until 25 June 2026.',
+    'Payment clearance is required before admit cards are issued.',
+    'Departments:',
+    'CSE- 27, 29 & 30 June',
+    'EEE- 27, 29 & 30 June',
+    'CIVIL- 27, 29 & 30 June',
+    'Person & Event',
+    'Place of Issue',
+    'Ground Floor, Office of the Controller of Examinations (Building-2)',
+]):
+    page.insert_text((35,90+number*42),line,fontsize=14)
+image=page.get_pixmap(matrix=pymupdf.Matrix(2,2)).tobytes('jpeg')
+admit.close();scan=pymupdf.open();page=scan.new_page(width=600,height=850)
+page.insert_image(pymupdf.Rect(0,75,600,775),stream=image)
+scan.save(root/'admit-scanned.pdf');scan.close()
 with zipfile.ZipFile(root/'notice.docx','w',zipfile.ZIP_DEFLATED) as z:
     z.writestr('[Content_Types].xml','<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
     z.writestr('_rels/.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>')

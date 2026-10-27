@@ -1,5 +1,5 @@
 import express from "express";
-import { queueDocument } from "./documents.js";
+import { queueDocument, analyzeUpload } from "./documents.js";
 import { groupRoutes, groupLabel } from "./groups.js";
 import helmet from "helmet";
 import multer from "multer";
@@ -35,6 +35,7 @@ export async function createApp({
   production = false,
   provisional = false,
   sendMail = null,
+  analyzeDocument = analyzeUpload,
 }) {
   if (!secret || secret.length < 32)
     throw new Error("RATE_LIMIT_SECRET must contain at least 32 characters.");
@@ -68,13 +69,19 @@ export async function createApp({
     const isAllowed =
       Boolean(reqOrigin) &&
       (reqOrigin === origin ||
-        (reqHost && (reqOrigin === `http://${reqHost}` || reqOrigin === `https://${reqHost}`)) ||
+        (reqHost &&
+          (reqOrigin === `http://${reqHost}` ||
+            reqOrigin === `https://${reqHost}`)) ||
         (!production &&
           (reqOrigin === "null" ||
-            /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/.test(reqOrigin) ||
+            /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/.test(
+              reqOrigin,
+            ) ||
             /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(reqOrigin) ||
             /^https?:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(reqOrigin) ||
-            /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/.test(reqOrigin))));
+            /^https?:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+(:\d+)?$/.test(
+              reqOrigin,
+            ))));
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !isAllowed)
       return res.status(403).json({ error: "Request origin is not allowed." });
     next();
@@ -338,8 +345,7 @@ export async function createApp({
           "SELECT id FROM departments WHERE (id=? OR code=? COLLATE NOCASE) AND active=1",
         )
         .get(department, department);
-      if (!deptRow)
-        fail(400, "Choose an active department.");
+      if (!deptRow) fail(400, "Choose an active department.");
       transaction(db, () => {
         const userId = randomUUID();
         db.prepare(
@@ -586,13 +592,14 @@ export async function createApp({
           .get(target.id);
         if (!existingAssignments) {
           const reqDepts = db
-            .prepare("SELECT department_id FROM teacher_requests WHERE user_id=?")
+            .prepare(
+              "SELECT department_id FROM teacher_requests WHERE user_id=?",
+            )
             .all(target.id);
           for (const r of reqDepts) {
-            db.prepare("INSERT OR IGNORE INTO teacher_departments VALUES(?,?)").run(
-              target.id,
-              r.department_id,
-            );
+            db.prepare(
+              "INSERT OR IGNORE INTO teacher_departments VALUES(?,?)",
+            ).run(target.id, r.department_id);
           }
         }
       }
@@ -751,6 +758,40 @@ export async function createApp({
     limit(req, "notice-write", 60);
     next();
   };
+  function validateAttachment(file) {
+    if (file) {
+      const { buffer, originalname, size } = file;
+      const ext = originalname.split(".").pop().toLowerCase();
+      const signature =
+        ext === "pdf"
+          ? buffer.subarray(0, 5).toString() === "%PDF-"
+          : ["docx", "xlsx"].includes(ext)
+            ? buffer
+                .subarray(0, 4)
+                .equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))
+            : ["doc", "xls"].includes(ext)
+              ? buffer
+                  .subarray(0, 8)
+                  .equals(
+                    Buffer.from([
+                      0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+                    ]),
+                  )
+              : false;
+      if (!signature || !size)
+        fail(400, "Choose a valid PDF, Word, or Excel document.");
+      file.safeName = originalname
+        .replace(/[^a-zA-Z0-9._ -]/g, "_")
+        .slice(-120);
+      file.safeMime = {
+        pdf: "application/pdf",
+        xls: "application/vnd.ms-excel",
+        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        doc: "application/msword",
+        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      }[ext];
+    }
+  }
   function noticeData(req, existing) {
     fields(req.body, [
       "title",
@@ -763,7 +804,9 @@ export async function createApp({
       "groupId",
     ]);
     const title = text(req.body.title, "Title", 1, 120),
-      content = req.body.content ? text(req.body.content, "Notice details", 0, 5000) : "",
+      content = req.body.content
+        ? text(req.body.content, "Notice details", 1, 5000)
+        : title,
       category = req.body.category,
       status = req.body.status;
     if (
@@ -809,38 +852,7 @@ export async function createApp({
         403,
         "Only the department head can broadcast to this department. Choose a class instead.",
       );
-    if (req.file) {
-      const { buffer, originalname, size } = req.file;
-      const ext = originalname.split(".").pop().toLowerCase();
-      const signature =
-        ext === "pdf"
-          ? buffer.subarray(0, 5).toString() === "%PDF-"
-          : ["docx", "xlsx"].includes(ext)
-            ? buffer
-                .subarray(0, 4)
-                .equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]))
-            : ["doc", "xls"].includes(ext)
-              ? buffer
-                  .subarray(0, 8)
-                  .equals(
-                    Buffer.from([
-                      0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
-                    ]),
-                  )
-              : false;
-      if (!signature || !size)
-        fail(400, "Choose a valid PDF, Word, or Excel document.");
-      req.file.safeName = originalname
-        .replace(/[^a-zA-Z0-9._ -]/g, "_")
-        .slice(-120);
-      req.file.safeMime = {
-        pdf: "application/pdf",
-        xls: "application/vnd.ms-excel",
-        xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        doc: "application/msword",
-        docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      }[ext];
-    }
+    validateAttachment(req.file);
     return { title, content, category, status, department, group };
   }
   function saveAttachment(req, id) {
@@ -910,6 +922,13 @@ export async function createApp({
       publishedAt: n.published_at,
       version: n.version,
       file: file || null,
+      keywords: JSON.parse(
+        db
+          .prepare(
+            "SELECT key_phrases FROM document_previews WHERE notice_id=? AND status='READY'",
+          )
+          .get(n.id)?.key_phrases || "[]",
+      ),
       documentText:
         db
           .prepare(
@@ -1015,6 +1034,67 @@ export async function createApp({
         )
         .all(req.params.id),
     );
+  });
+  app.post(
+    "/api/notices/analyze",
+    uploadLimit,
+    upload,
+    authenticate,
+    approved,
+    async (req, res) => {
+      fields(req.body, []);
+      if (!req.file) fail(400, "Choose a PDF or Word document to analyze.");
+      validateAttachment(req.file);
+      if (!/[.](pdf|docx)$/i.test(req.file.safeName))
+        fail(400, "Document suggestions currently support PDF and DOCX files.");
+      limit(req, "notice-analyze", 10);
+      try {
+        const result = await analyzeDocument(req.file);
+        // Parsing can take time; check the current account again before returning document text.
+        const current = db
+          .prepare("SELECT * FROM users WHERE id=?")
+          .get(req.user.id);
+        if (
+          !current ||
+          current.status !== "APPROVED" ||
+          current.must_change_password
+        )
+          fail(403, "This account cannot analyze notices.");
+        authenticate(req, res, () => res.json(result));
+      } catch (error) {
+        if (error.status) throw error;
+        fail(
+          422,
+          "The document could not be read. Check the file and try again, or enter the notice details manually.",
+        );
+      }
+    },
+  );
+  app.post("/api/notices/:id/analyze", async (req, res) => {
+    fields(req.body, []);
+    findNotice(req, true);
+    const attachment = db
+      .prepare("SELECT name,data FROM attachments WHERE notice_id=?")
+      .get(req.params.id);
+    if (!attachment || !/\.(pdf|docx)$/i.test(attachment.name))
+      fail(400, "This notice needs an attached PDF or DOCX for analysis.");
+    limit(req, "notice-analyze", 10);
+    try {
+      const result = await analyzeDocument({
+        originalname: attachment.name,
+        buffer: attachment.data,
+      });
+      authenticate(req, res, () => {
+        findNotice(req, true);
+        res.json(result);
+      });
+    } catch (error) {
+      if (error.status) throw error;
+      fail(
+        422,
+        "The document could not be read. Check the file and try again.",
+      );
+    }
   });
   app.post(
     "/api/notices",

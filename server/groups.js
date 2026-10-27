@@ -3,7 +3,7 @@ import { fields, text, fail } from "./security.js";
 import { assigned, isHead } from "./permissions.js";
 import { audit, transaction } from "./db.js";
 export const groupLabel = (g) =>
-  `${g.batch} ? ${g.class_name} ? Section ${g.section}`;
+  `${g.batch} · ${g.class_name} · Section ${g.section}`;
 export function groupRoutes(app, db, authenticate, approved) {
   const manage = (user, department) =>
     assigned(db, user, department) &&
@@ -120,14 +120,6 @@ export function groupRoutes(app, db, authenticate, approved) {
   });
   app.get("/api/audiences", authenticate, approved, (req, res) => {
     if (req.user.role === "STUDENT") return res.json([]);
-    if (
-      req.user.role === "TEACHER" &&
-      !db
-        .prepare("SELECT 1 FROM department_heads WHERE user_id=?")
-        .get(req.user.id)
-    ) {
-      return res.json([]);
-    }
     const options = [];
     if (req.user.role === "ADMIN")
       options.push({
@@ -146,6 +138,18 @@ export function groupRoutes(app, db, authenticate, approved) {
           departmentId: d.id,
           groupId: "",
           label: `${d.name} (${d.code}) - Department broadcast`,
+        });
+      }
+      for (const g of db
+        .prepare(
+          "SELECT * FROM class_groups WHERE department_id=? AND active=1 ORDER BY batch,class_name,section",
+        )
+        .all(d.id)) {
+        options.push({
+          id: g.id,
+          departmentId: d.id,
+          groupId: g.id,
+          label: `${d.name} (${d.code}) - ${groupLabel(g)}`,
         });
       }
     }

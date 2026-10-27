@@ -120,10 +120,13 @@
               id="requestedDepartments"
               required
               aria-describedby="departmentHelp"
-            ><option value="">Choose your department</option></select
-          ></label>
+            >
+              <option value="">Choose your department</option>
+            </select></label
+          >
           <p class="field-help" id="departmentHelp">
-            Select your initial department. The administrator can assign additional departments upon approval.
+            Select your initial department. The administrator can assign
+            additional departments upon approval.
           </p>
           <label
             >Institutional information<textarea
@@ -278,8 +281,12 @@
           <button class="nav-item" data-category="URGENT">
             <span class="nav-symbol" aria-hidden="true">!</span>Urgent notices
           </button>
-        <button class="nav-item" id="manageButton" hidden>Administration</button
-        ><button class="nav-item" data-sign-out>Sign out</button>
+          <button class="nav-item" id="groupsButton">Classes</button>
+          <button class="nav-item" id="manageButton" hidden>
+            Administration
+          </button>
+          <button class="nav-item" data-sign-out>Sign out</button>
+        </nav>
         <div class="sidebar-note">
           <span class="small-label">NOTICE BOARD</span>
           <p>Department updates,<br />in one place.</p>
@@ -529,7 +536,8 @@
             maxlength="120"
             placeholder="A short, descriptive title" /></label
         ><label
-          >Notice details <span class="optional">(optional)</span><textarea
+          >Notice details <span class="optional">(optional)</span
+          ><textarea
             id="noticeContent"
             maxlength="5000"
             rows="6"
@@ -543,9 +551,19 @@
             accept=".pdf,.doc,.docx,.xls,.xlsx"
         /></label>
         <p class="field-help">
-          PDF, Word, or Excel document, up to 25 MB. The original file is stored
-          on the server for authorized readers.
+          PDF, Word, or Excel document, up to 25 MB. PDF and DOCX files can
+          suggest a title and key details; review them before publishing. The
+          original file stays available to authorized readers.
         </p>
+        <p id="noticeAnalysisStatus" class="field-help" role="status"></p>
+        <button
+          type="button"
+          id="reanalyzeNotice"
+          class="button secondary"
+          hidden
+        >
+          Reanalyze and replace suggestions
+        </button>
         <label
           >Publication status<select id="noticeStatus">
             <option value="DRAFT">Draft - only you and the admin</option>
@@ -581,10 +599,31 @@
       <p id="detailsMeta" class="details-meta"></p>
       <div class="notice-zoom-bar" id="noticeZoomBar">
         <span class="zoom-label">Text Zoom:</span>
-        <button type="button" class="zoom-btn" id="noticeZoomOut" title="Zoom out">A-</button>
+        <button
+          type="button"
+          class="zoom-btn"
+          id="noticeZoomOut"
+          title="Zoom out"
+        >
+          A-
+        </button>
         <span id="noticeZoomLevel" class="zoom-level">100%</span>
-        <button type="button" class="zoom-btn" id="noticeZoomIn" title="Zoom in">A+</button>
-        <button type="button" class="zoom-btn reset" id="noticeZoomReset" title="Reset zoom">Reset</button>
+        <button
+          type="button"
+          class="zoom-btn"
+          id="noticeZoomIn"
+          title="Zoom in"
+        >
+          A+
+        </button>
+        <button
+          type="button"
+          class="zoom-btn reset"
+          id="noticeZoomReset"
+          title="Reset zoom"
+        >
+          Reset
+        </button>
       </div>
       <div id="detailsContent" class="details-content"></div>
       <div id="attachmentArea"></div>
@@ -629,6 +668,20 @@
           Delete notice
         </button>
       </div>
+    </dialog>
+    <dialog id="groupsDialog" aria-labelledby="groupsTitle">
+      <div class="dialog-heading">
+        <h2 id="groupsTitle">Classes</h2>
+        <button
+          type="button"
+          class="icon-button close-dialog"
+          aria-label="Close classes"
+        >
+          &times;
+        </button>
+      </div>
+      <p id="groupsError" role="alert" class="form-error"></p>
+      <div id="groupsContent"></div>
     </dialog>
     <dialog
       id="manageDialog"
