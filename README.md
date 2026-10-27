@@ -1,18 +1,16 @@
 ﻿# Notify
 
-Notify is a university notice management system that helps students and teachers keep track of department announcements and campus updates. It is available through a web interface and an Android app.
+Notify is a university notice board for students, teachers, and administrators. It brings department announcements and university-wide updates together on the web and Android.
 
-## Core features
+## Features
 
-- **Department notice boards:** Students see published notices from their department, along with university-wide announcements from the administrator.
-- **Class and section groups:** Students join groups within their department. Teachers can send notices to a specific batch, class, and section.
-- **Student entry:** Students join using either their ID or university email. Duplicate registrations are prevented.
-- **Teacher registration and approval:** Teachers register with their university details and receive access after an administrator approves their account.
-- **Department management:** Administrators manage departments, assign teachers to one or more departments, and appoint department heads.
-- **Department head responsibilities:** Approved teachers can manage department notices where they have been appointed as head, using their existing teacher account.
-- **Notice publishing:** Authorized users can create drafts, publish notices, attach documents, and archive older announcements.
-- **Search and filtering:** Users can find notices by searching or browsing categories.
-- **Document reading:** PDF, Word, and Excel uploads keep their original files. PDF and DOCX notices can suggest titles and key details from document text, including OCR on scanned pages. Documents have page previews and an in-app Android PDF reader.
-- **Document access and sharing:** Users can download original attachments and copy or share notice content.
-- **Role-based access:** Students, teachers, and administrators have access to the features and notices relevant to their accounts.
-- **Web and Android access:** A responsive web interface and native Android notice screens support everyday use, with light and dark themes.
+- **Relevant notices:** Students see published notices for their department and university-wide announcements. Teachers see notices for their assigned departments.
+- **Student access:** Students can join with a university student ID or email. Duplicate student IDs are rejected.
+- **Teacher accounts:** Teachers register with their university details and can use teacher features after administrator approval.
+- **Department management:** Administrators manage departments, assign teachers to multiple departments, and appoint a head for each department. Department heads use their teacher accounts to manage notices for their own department.
+- **Notice publishing:** Authorized staff can prepare drafts, publish announcements for the appropriate audience, edit notices, and archive older posts. Administrators can also broadcast across the university.
+- **Document-based notices:** Staff can attach PDF, Word, or Excel files. For PDF and Word notices, Notify suggests a title and concise key details from the document, including text recovered from scanned pages. Staff can review and edit the wording before publishing.
+- **Document reading:** Readers can open attached documents within the web or Android app and download the original file. Android also includes an in-app PDF reader.
+- **Finding and sharing notices:** Search, categories, and department filters help readers find updates. Notice text can be copied or shared.
+
+Student sign-in currently relies on a student ID or university email without identity verification. It should be treated as provisional until the university adds a verified sign-in method.
