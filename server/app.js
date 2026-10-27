@@ -226,6 +226,7 @@ export async function createApp({
   }
   app.get("/api/config", (req, res) =>
     res.json({
+      service: "notify",
       provisionalStudents: provisional,
       emailVerification: !!sendMail,
     }),

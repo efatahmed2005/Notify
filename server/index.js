@@ -26,15 +26,19 @@ if (!config.production) {
   db.prepare("UPDATE users SET must_change_password=0 WHERE role='ADMIN' AND must_change_password=1").run();
 }
 import { startDocumentWorker } from "./documents.js";
+import { startLocalDiscovery } from "./local-discovery.js";
 const stopDocumentWorker = startDocumentWorker(db);
 const app = await createApp({ ...config, db });
+const port = Number(process.env.PORT || 8080);
 const server = app.listen(
-  Number(process.env.PORT || 8080),
+  port,
   process.env.HOST || "0.0.0.0",
-  () =>
+  () => {
+    if (!config.production) startLocalDiscovery(port);
     console.log(
       `Notify is running at ${config.origin}. Open this address in your browser; Live Server does not provide the API.`,
-    ),
+    );
+  },
 );
 function shutdown() {
   server.close(async () => {

@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.notify.data.model.User;
 import com.example.notify.data.remote.ApiClient;
+import com.example.notify.data.remote.LocalServerDiscovery;
 import com.google.android.material.button.MaterialButton;
 
 /** Shared hosted account flows, with an entry to the existing native notice screens. */
@@ -83,17 +84,19 @@ public class MainActivity extends AppCompatActivity {
     ApiClient.init(this);
     errorText = new TextView(this);
     errorText.setPadding(24, 16, 24, 16);
-    errorText.setVisibility(View.GONE);
+    errorText.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.on_surface));
+    errorText.setText("Looking for the Notify server on this network...");
     layout.addView(errorText);
     configServerButton = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle);
-    configServerButton.setText("Change Server URL / IP");
-    configServerButton.setVisibility(View.GONE);
+    configServerButton.setText("Enter server address");
     configServerButton.setOnClickListener(v -> showServerConfigDialog());
     layout.addView(configServerButton);
     portal = new WebView(this);
+    portal.setVisibility(View.GONE);
     layout.addView(portal, new LinearLayout.LayoutParams(-1, 0, 1));
     nativeButton = new MaterialButton(this);
     nativeButton.setText("Open native notice board");
+    nativeButton.setVisibility(View.GONE);
     layout.addView(nativeButton);
     setContentView(layout);
     portal.getSettings().setJavaScriptEnabled(true);
@@ -105,19 +108,6 @@ public class MainActivity extends AppCompatActivity {
       .setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     CookieManager.getInstance().setAcceptCookie(true);
     CookieManager.getInstance().setAcceptThirdPartyCookies(portal, false);
-
-    // Persistent login check on launch
-    ApiClient.async(
-      ApiClient::refreshSession,
-      new ApiClient.Callback<User>() {
-        public void success(User user) {
-          if (user != null && user.isApproved() && !isFinishing()) {
-            launchNativeDashboard(user);
-          }
-        }
-        public void error(Exception ignored) {}
-      }
-    );
 
     portal.setWebViewClient(
       new WebViewClient() {
@@ -235,27 +225,41 @@ public class MainActivity extends AppCompatActivity {
         }
       );
     });
-    loadPortal();
+    connectToServer();
   }
 
-  private void loadPortal() {
-    String base = ApiClient.baseUrl();
-    if (base.contains("example.invalid")) {
-      showError(
-        "Notify server is not configured. Set NOTIFY_SERVER_URL or tap 'Change Server URL / IP'."
-      );
-      nativeButton.setEnabled(false);
-    } else {
-      nativeButton.setEnabled(true);
-      portal.loadUrl(
-        base +
+  private void connectToServer() {
+    errorText.setText("Looking for the Notify server on this network...");
+    errorText.setVisibility(View.VISIBLE);
+    portal.setVisibility(View.GONE);
+    nativeButton.setVisibility(View.GONE);
+    ApiClient.async(() -> {
+      String configured = ApiClient.baseUrl();
+      if (ApiClient.probeServer(configured)) return configured;
+      return BuildConfig.DEBUG ? LocalServerDiscovery.find() : null;
+    }, new ApiClient.Callback<String>() {
+      public void success(String url) {
+        if (isFinishing() || isDestroyed()) return;
+        if (url == null) {
+          showError("Could not find the Notify server. Start it on your laptop, keep both devices on the same Wi-Fi or hotspot, and allow the connection through the laptop firewall. Tap 'Enter server address' if automatic discovery is blocked.");
+          return;
+        }
+        if (!url.equals(ApiClient.baseUrl())) ApiClient.setCustomBaseUrl(MainActivity.this, url);
+        errorText.setVisibility(View.GONE);
+        portal.setVisibility(View.VISIBLE);
+        nativeButton.setVisibility(View.VISIBLE);
+        portal.loadUrl(url +
           (getIntent().getBooleanExtra("openClasses", false)
             ? "/?view=classes"
             : getIntent().getBooleanExtra("openAdministration", false)
               ? "/?view=administration"
               : "/")
-      );
-    }
+        );
+      }
+      public void error(Exception error) {
+        if (!isFinishing()) showError("Could not connect to the Notify server.");
+      }
+    });
   }
 
   private void showServerConfigDialog() {
@@ -266,24 +270,22 @@ public class MainActivity extends AppCompatActivity {
 
     new androidx.appcompat.app.AlertDialog.Builder(this)
       .setTitle("Configure Server URL")
-      .setMessage("Set the Notify server address:\n\n• Physical phone on Wi-Fi: http://10.49.70.80:8080\n• Android Studio emulator: http://10.0.2.2:8080")
+      .setMessage("Enter the laptop's current local address, for example http://192.168.0.101:8080. The address can change when you switch Wi-Fi or use a mobile hotspot.")
       .setView(input)
       .setPositiveButton("Connect", (d, w) -> {
         String url = input.getText().toString().trim();
-        if (!url.isEmpty()) {
+        try {
           ApiClient.setCustomBaseUrl(this, url);
-          errorText.setVisibility(View.GONE);
-          configServerButton.setVisibility(View.GONE);
-          loadPortal();
+          connectToServer();
+        } catch (IllegalArgumentException invalid) {
+          showError(invalid.getMessage());
         }
       })
       .setNeutralButton("Use Emulator IP (10.0.2.2)", (d, w) -> {
         ApiClient.setCustomBaseUrl(this, "http://10.0.2.2:8080");
-        errorText.setVisibility(View.GONE);
-        configServerButton.setVisibility(View.GONE);
-        loadPortal();
+        connectToServer();
       })
-      .setNegativeButton("Cancel", null)
+      .setNegativeButton("Search again", (d, w) -> connectToServer())
       .show();
   }
 
@@ -311,6 +313,8 @@ public class MainActivity extends AppCompatActivity {
   private void showError(String message) {
     errorText.setText(message + "\n(Target: " + ApiClient.baseUrl() + ")");
     errorText.setVisibility(View.VISIBLE);
+    portal.setVisibility(View.GONE);
+    nativeButton.setVisibility(View.GONE);
     if (configServerButton != null) {
       configServerButton.setVisibility(View.VISIBLE);
     }

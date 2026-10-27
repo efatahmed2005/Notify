@@ -9,6 +9,7 @@ import com.example.notify.data.model.User;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,13 +51,60 @@ public final class ApiClient {
 
   public static void setCustomBaseUrl(Context context, String url) {
     if (url != null && !url.trim().isEmpty()) {
-      customBaseUrl = url.trim().replaceAll("/+$", "");
+      customBaseUrl = normalizeServerUrl(url);
+      currentUser = null;
+      csrf = "";
       if (context != null) {
         context.getSharedPreferences("notify_prefs", Context.MODE_PRIVATE)
             .edit()
             .putString("server_url", customBaseUrl)
             .apply();
       }
+    }
+  }
+
+  public static String normalizeServerUrl(String raw) {
+    try {
+      URI uri = new URI(raw.trim());
+      String scheme = uri.getScheme();
+      if (scheme == null || !(scheme.equals("https") || (BuildConfig.DEBUG && scheme.equals("http")))
+          || uri.getHost() == null || uri.getUserInfo() != null || uri.getQuery() != null
+          || uri.getFragment() != null || (uri.getPath() != null && !uri.getPath().isEmpty()
+          && !uri.getPath().equals("/"))) throw new IllegalArgumentException();
+      int port = uri.getPort();
+      if (port > 65535) throw new IllegalArgumentException();
+      return scheme + "://" + uri.getRawAuthority().replaceAll("/+$", "");
+    } catch (Exception invalid) {
+      throw new IllegalArgumentException("Enter a server address such as http://192.168.0.101:8080.");
+    }
+  }
+
+  public static boolean probeServer(String raw) {
+    HttpURLConnection connection = null;
+    try {
+      String base = normalizeServerUrl(raw);
+      connection = (HttpURLConnection) new URL(base + "/api/config").openConnection();
+      connection.setConnectTimeout(1500);
+      connection.setReadTimeout(1500);
+      connection.setInstanceFollowRedirects(false);
+      connection.setRequestProperty("Accept", "application/json");
+      if (connection.getResponseCode() != 200 ||
+          !String.valueOf(connection.getContentType()).toLowerCase(java.util.Locale.ROOT).contains("application/json"))
+        return false;
+      try (InputStream input = connection.getInputStream()) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        byte[] chunk = new byte[512];
+        int count;
+        while (output.size() < 2048 && (count = input.read(chunk, 0, Math.min(chunk.length, 2048 - output.size()))) != -1)
+          output.write(chunk, 0, count);
+        JSONObject config = new JSONObject(output.toString("UTF-8"));
+        return "notify".equals(config.optString("service")) ||
+            (config.has("provisionalStudents") && config.has("emailVerification"));
+      }
+    } catch (Exception ignored) {
+      return false;
+    } finally {
+      if (connection != null) connection.disconnect();
     }
   }
 
