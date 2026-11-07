@@ -249,11 +249,9 @@ public class MainActivity extends AppCompatActivity {
         portal.setVisibility(View.VISIBLE);
         nativeButton.setVisibility(View.VISIBLE);
         portal.loadUrl(url +
-          (getIntent().getBooleanExtra("openClasses", false)
-            ? "/?view=classes"
-            : getIntent().getBooleanExtra("openAdministration", false)
-              ? "/?view=administration"
-              : "/")
+          (getIntent().getBooleanExtra("openAdministration", false)
+            ? "/?view=administration"
+            : "/")
         );
       }
       public void error(Exception error) {

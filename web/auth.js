@@ -295,12 +295,6 @@
           !Notify.user.mustChangePassword
         )
           $("manageButton").click();
-        if (
-          new URLSearchParams(location.search).get("view") === "classes" &&
-          Notify.user.status === "APPROVED" &&
-          !Notify.user.mustChangePassword
-        )
-          $("groupsButton")?.click();
       } catch (e) {
         if (e.status !== 401) throw e;
       }

@@ -181,20 +181,6 @@ try {
     fullPage: true,
   });
   await admin.locator("#manageDialog .close-dialog").click();
-  await admin.locator("#groupsButton").click();
-  const classForm = admin.locator('#groupsContent [data-action="create"]');
-  await classForm
-    .locator('[name="departmentId"]')
-    .selectOption(departments[0].id);
-  await classForm.locator('[name="batch"]').fill("2024");
-  await classForm.locator('[name="className"]').fill("Semester 3");
-  await classForm.locator('[name="section"]').fill("A");
-  await classForm.locator('button[type="submit"]').click();
-  await admin.locator('#groupsContent [data-action="edit"]').waitFor();
-  const classId = await admin
-    .locator('#groupsContent [data-action="edit"]')
-    .getAttribute("data-id");
-  await admin.locator("#groupsDialog .close-dialog").click();
   await teacher.reload();
   await teacher.locator("#authScreen").waitFor({ state: "visible" });
   await teacher.locator("[data-auth-tab=staff]").first().click();
@@ -204,7 +190,7 @@ try {
   await teacher.locator("#newNotice").waitFor({ state: "visible" });
   await teacher.locator("#newNotice").click();
   await teacher.locator("#noticeStatus").selectOption("PUBLISHED");
-  await teacher.locator("#noticeDepartment").selectOption(classId);
+  await teacher.locator("#noticeDepartment").selectOption(departments[0].id);
   await teacher.locator("#noticeFile").setInputFiles({
     name: "schedule.pdf",
     mimeType: "application/pdf",
@@ -238,18 +224,8 @@ try {
   await student.locator("#studentDepartment").selectOption(departments[0].id);
   await student.locator("#studentLoginForm button[type=submit]").click();
   await student.locator("#appLayout").waitFor({ state: "visible" });
-  assert.equal(await student.locator(".notice-row").count(), 0);
-  // On mobile the navigation is collapsed.
-  await student.locator("#menuButton").click();
-  await student.locator("#groupsButton").click();
-  await student.locator('#groupsContent [data-action="join"] button').click();
-  await student.locator('#groupsContent [data-action="leave"]').waitFor();
-  await student.locator("#groupsDialog .close-dialog").click();
-  assert.equal(
-    await student.locator("#menuButton").getAttribute("aria-expanded"),
-    "false",
-  );
   await student.locator(".notice-row").waitFor();
+  assert.equal(await student.locator("#groupsButton").count(), 0);
   assert.equal(await student.locator("#newNotice").isVisible(), false);
   assert.equal(await student.locator("#manageButton").isVisible(), false);
   await student.screenshot({
@@ -324,7 +300,7 @@ try {
   await newcomer.close();
   assert.deepEqual(errors, []);
   console.log(
-    "PASS browser: admin departments, teacher approval, head assignment, student enrollment, class publishing, document opening, access control, and mobile layout.",
+    "PASS browser: admin departments, teacher approval, head assignment, student enrollment, department publishing, document opening, access control, and mobile layout.",
   );
 } finally {
   await browser.close();

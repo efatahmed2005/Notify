@@ -1,6 +1,5 @@
 import express from "express";
 import { queueDocument, analyzeUpload } from "./documents.js";
-import { groupRoutes, groupLabel } from "./groups.js";
 import helmet from "helmet";
 import multer from "multer";
 import { randomUUID } from "node:crypto";
@@ -25,7 +24,6 @@ import {
   assigned,
   canRead,
   canManage,
-  isHead,
 } from "./permissions.js";
 
 export async function createApp({
@@ -742,7 +740,23 @@ export async function createApp({
     ),
   );
 
-  groupRoutes(app, db, authenticate, approved);
+  app.get("/api/audiences", authenticate, approved, (req, res) => {
+    if (req.user.role === "STUDENT") return res.json([]);
+    const options = req.user.role === "ADMIN"
+      ? [{ id: "ALL", departmentId: "", label: "University-wide" }]
+      : [];
+    for (const department of db
+      .prepare("SELECT id,name,code FROM departments WHERE active=1 ORDER BY code")
+      .all()) {
+      if (assigned(db, req.user, department.id))
+        options.push({
+          id: department.id,
+          departmentId: department.id,
+          label: `${department.name} (${department.code})`,
+        });
+    }
+    res.json(options);
+  });
 
   const upload = multer({
     storage: multer.memoryStorage(),
@@ -802,7 +816,6 @@ export async function createApp({
       "status",
       "version",
       "removeAttachment",
-      "groupId",
     ]);
     const title = text(req.body.title, "Title", 1, 120),
       content = req.body.content
@@ -830,31 +843,8 @@ export async function createApp({
       );
     if (req.user.role === "STUDENT" || !assigned(db, req.user, department))
       fail(403, "You cannot publish in this department.");
-    const group = req.body.groupId || null;
-    if (group !== null && typeof group !== "string")
-      fail(400, "Choose a valid class.");
-    if (existing && group !== existing.group_id)
-      fail(400, "The notice audience cannot be changed. Create a new notice.");
-    if (
-      group &&
-      !db
-        .prepare(
-          "SELECT 1 FROM class_groups WHERE id=? AND department_id=? AND active=1",
-        )
-        .get(group, department)
-    )
-      fail(403, "This class is not available in the selected department.");
-    if (
-      !group &&
-      req.user.role !== "ADMIN" &&
-      !isHead(db, req.user, department)
-    )
-      fail(
-        403,
-        "Only the department head can broadcast to this department. Choose a class instead.",
-      );
     validateAttachment(req.file);
-    return { title, content, category, status, department, group };
+    return { title, content, category, status, department };
   }
   function saveAttachment(req, id) {
     if (
@@ -907,14 +897,7 @@ export async function createApp({
       category: n.category,
       status: n.status,
       department: n.department_id || "ALL",
-      groupId: n.group_id,
-      audience: n.group_id
-        ? groupLabel(
-            db.prepare("SELECT * FROM class_groups WHERE id=?").get(n.group_id),
-          )
-        : n.department_id
-          ? "Department broadcast"
-          : "University-wide broadcast",
+      audience: n.department_id ? "Department" : "University-wide",
       authorId: n.author_id,
       author: author.name,
       authorRole: author.role,
@@ -1109,7 +1092,7 @@ export async function createApp({
         now = Date.now();
       transaction(db, () => {
         db.prepare(
-          "INSERT INTO notices(id,author_id,department_id,title,content,category,status,created_at,updated_at,published_at,group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO notices(id,author_id,department_id,title,content,category,status,created_at,updated_at,published_at) VALUES(?,?,?,?,?,?,?,?,?,?)",
         ).run(
           id,
           req.user.id,
@@ -1121,7 +1104,6 @@ export async function createApp({
           now,
           now,
           data.status === "PUBLISHED" ? now : null,
-          data.group,
         );
         saveAttachment(req, id);
         revision(req, id);

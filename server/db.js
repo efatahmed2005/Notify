@@ -15,6 +15,7 @@ export function openDatabase(filename) {
     [1, "001_initial.sql"],
     [2, "002_class_groups.sql"],
     [3, "003_document_suggestions.sql"],
+    [4, "004_department_notices.sql"],
   ]) {
     if (
       !db

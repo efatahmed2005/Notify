@@ -41,10 +41,10 @@ SQLite provides persistent transactions for a single server on a local disk. Thi
 
 A dashboard, passing tests, production flag, or gateway acknowledgement alone is not proof of production security.
 
-## Updated student and class workflow
+## Student and department workflow
 
 At the project owner's request, development student access accepts either an ID or university email without verification and permits self-enrollment into a chosen active department. ID/email uniqueness prevents duplicate records, but does not prevent impersonation or a false department declaration at registration. Existing students cannot change their department at sign-in. These accounts never receive teacher/admin powers. The provisional label and production startup restriction remain in place; this is not a verified student identity system.
 
-Students may immediately join any active class within their current department. Therefore class membership is self-declared, not verified enrollment. Leaving a class, transferring department, or deactivating a class removes access to notices and document artifacts on subsequent requests. Teacher department assignments and head responsibilities remain administrator-controlled.
+Students can read published notices for their current department and university-wide notices without joining a class. Department transfers revoke their sessions and update document access on subsequent requests. Teacher department assignments and head responsibilities remain administrator-controlled.
 
 See [document processing](DOCUMENTS.md) for converter isolation, limits, and exact-file versus converted-preview behavior.

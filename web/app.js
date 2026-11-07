@@ -193,9 +193,7 @@ function openComposer(notice = null) {
     )
     .join("");
   if (!audiences.length) {
-    message(
-      "No publishing audiences are assigned. Ask your department head or administrator to create class groups.",
-    );
+    message("No department is assigned to your account. Contact the administrator.");
     return;
   }
   $("noticeDepartment").disabled = !!notice;
@@ -205,7 +203,7 @@ function openComposer(notice = null) {
     !!notice && notice.status !== "DRAFT";
   if (notice) {
     $("noticeCategory").value = notice.category;
-    $("noticeDepartment").value = notice.groupId || notice.department;
+    $("noticeDepartment").value = notice.department;
     $("noticeTitle").value = notice.title;
     $("noticeContent").value = notice.content;
   }
@@ -349,9 +347,8 @@ $("composerForm").onsubmit = (event) => {
     const audience = audiences.find(
       (a) => a.id === $("noticeDepartment").value,
     );
-    if (!audience) throw new Error("Choose an available audience.");
+    if (!audience) throw new Error("Choose an available department.");
     body.set("departmentId", audience.departmentId);
-    body.set("groupId", audience.groupId);
     body.set("status", $("noticeStatus").value);
     if (editing) body.set("version", editing.version);
     body.set("removeAttachment", String($("removeFile").checked));

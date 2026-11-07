@@ -46,21 +46,12 @@ public class Notice implements Serializable {
   private String publisherName;
   private User.Role publisherRole;
   private String targetDepartment; // "ALL", "CSE", "EEE", "BBA", etc.
-  private String targetAudience; // "Campus-Wide", "Department Only", "Batch 2024", etc.
+  private String targetAudience; // Department name or university-wide scope
   private Category category;
   private Urgency urgency;
   private long timestamp; // Unix epoch millis
 
   // Attachment fields (PDF / Documents)
-  private String groupId;
-
-  public String getGroupId() {
-    return groupId;
-  }
-
-  public void setGroupId(String value) {
-    groupId = value;
-  }
 
   private String attachmentName;
   private String attachmentType; // "pdf", "doc", "docx"

@@ -14,7 +14,6 @@
     <script src="api.js" defer></script>
     <script src="auth.js" defer></script>
     <script src="manage.js" defer></script>
-    <script src="groups.js" defer></script>
     <script src="documents.js" defer></script>
     <script src="app.js" defer></script>
   </head>
@@ -293,7 +292,6 @@
           <button class="nav-item" data-category="URGENT">
             <span class="nav-symbol" aria-hidden="true">!</span>Urgent notices
           </button>
-          <button class="nav-item" id="groupsButton">Classes</button>
           <button class="nav-item" id="manageButton" hidden>
             Administration
           </button>
@@ -537,9 +535,7 @@
             &times;
           </button>
         </div>
-        <p class="form-intro">
-          Choose a class, or a broadcast audience you are authorized to use.
-        </p>
+        <p class="form-intro">Choose a department or, if available, a university-wide audience.</p>
         <div class="form-row">
           <label
             >Category<select id="noticeCategory">
@@ -548,7 +544,7 @@
               <option value="EVENT">Event</option>
               <option value="URGENT">Urgent notice</option>
             </select></label
-          ><label>Audience<select id="noticeDepartment"></select></label>
+          ><label>Department<select id="noticeDepartment"></select></label>
         </div>
         <label
           >Title<input
@@ -689,20 +685,6 @@
           Delete notice
         </button>
       </div>
-    </dialog>
-    <dialog id="groupsDialog" aria-labelledby="groupsTitle">
-      <div class="dialog-heading">
-        <h2 id="groupsTitle">Classes</h2>
-        <button
-          type="button"
-          class="icon-button close-dialog"
-          aria-label="Close classes"
-        >
-          &times;
-        </button>
-      </div>
-      <p id="groupsError" role="alert" class="form-error"></p>
-      <div id="groupsContent"></div>
     </dialog>
     <dialog
       id="manageDialog"

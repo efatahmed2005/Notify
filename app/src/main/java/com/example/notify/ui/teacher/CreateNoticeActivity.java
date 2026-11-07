@@ -401,7 +401,7 @@ public class CreateNoticeActivity
       if ("".equals(targetDept)) targetDept = "ALL";
       if (targetDept == null) {
         actvAudience.setError(
-          "Choose an available class or broadcast audience."
+          "Choose an assigned department or university-wide audience."
         );
         return;
       }
@@ -427,7 +427,6 @@ public class CreateNoticeActivity
             : null
       );
 
-      newNotice.setGroupId(audience.optString("groupId", ""));
       boolean draft = (
         (android.widget.CheckBox) findViewById(R.id.cbSaveDraft)
       ).isChecked();
