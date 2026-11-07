@@ -111,6 +111,11 @@ try {
   await admin.locator("[data-auth-tab=staff]").first().click();
   await admin.locator("#staffEmail").fill("admin@nwu.ac.bd");
   await admin.locator("#staffPassword").fill(password);
+  await admin.locator('[data-password-toggle="staffPassword"]').click();
+  assert.equal(await admin.locator("#staffPassword").getAttribute("type"), "text");
+  assert.equal(await admin.locator("#staffPassword").inputValue(), password);
+  await admin.locator('[data-password-toggle="staffPassword"]').click();
+  assert.equal(await admin.locator("#staffPassword").getAttribute("type"), "password");
   await admin.locator("#staffLoginForm button[type=submit]").click();
   await admin.locator("#manageButton").waitFor({ state: "visible" });
   await admin.locator("#manageButton").click();
@@ -140,6 +145,10 @@ try {
   await teacher.locator("#registerName").fill("Test Faculty");
   await teacher.locator("#registerEmail").fill("faculty@nwu.ac.bd");
   await teacher.locator("#registerPassword").fill(password);
+  await teacher.locator('[data-password-toggle="registerPassword"]').click();
+  assert.equal(await teacher.locator("#registerPassword").getAttribute("type"), "text");
+  await teacher.locator('[data-password-toggle="registerPassword"]').click();
+  assert.equal(await teacher.locator("#registerPassword").getAttribute("type"), "password");
   await teacher
     .locator("#requestedDepartments")
     .selectOption(departments.map((d) => d.id));

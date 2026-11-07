@@ -82,14 +82,18 @@
               type="email"
               autocomplete="username"
               required /></label
-          ><label
-            >Password<input
-              id="staffPassword"
-              type="password"
-              autocomplete="current-password"
-              maxlength="128"
-              required
-          /></label>
+          ><div class="password-control">
+            <label for="staffPassword">Password</label>
+            <div class="password-field">
+              <input
+                id="staffPassword"
+                type="password"
+                autocomplete="current-password"
+                maxlength="128"
+                required />
+              <button type="button" class="password-toggle" data-password-toggle="staffPassword" data-password-label="password" aria-controls="staffPassword" aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
+          </div>
           <p role="alert" class="form-error"></p>
           <button type="submit" class="button primary">Sign in</button
           ><button type="button" class="text-button" data-auth-tab="recover">
@@ -137,15 +141,19 @@
               required
               placeholder="Your designation and staff appointment reference"
             ></textarea></label
-          ><label
-            >Password<input
-              id="registerPassword"
-              type="password"
-              autocomplete="new-password"
-              minlength="15"
-              maxlength="128"
-              required
-          /></label>
+          ><div class="password-control">
+            <label for="registerPassword">Password</label>
+            <div class="password-field">
+              <input
+                id="registerPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="15"
+                maxlength="128"
+                required />
+              <button type="button" class="password-toggle" data-password-toggle="registerPassword" data-password-label="password" aria-controls="registerPassword" aria-label="Show password" aria-pressed="false">Show</button>
+            </div>
+          </div>
           <p class="field-help">
             Use an individual password or passphrase of 15 to 128 characters.
           </p>
@@ -172,15 +180,19 @@
         </form>
         <form id="resetForm" data-auth-panel="reset" hidden>
           <h2>Set a new password</h2>
-          <label
-            >New password<input
-              id="resetPassword"
-              type="password"
-              autocomplete="new-password"
-              minlength="15"
-              maxlength="128"
-              required
-          /></label>
+          <div class="password-control">
+            <label for="resetPassword">New password</label>
+            <div class="password-field">
+              <input
+                id="resetPassword"
+                type="password"
+                autocomplete="new-password"
+                minlength="15"
+                maxlength="128"
+                required />
+              <button type="button" class="password-toggle" data-password-toggle="resetPassword" data-password-label="new password" aria-controls="resetPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+            </div>
+          </div>
           <p role="alert" class="form-error"></p>
           <button type="submit" class="button primary">Reset password</button>
         </form>
@@ -478,21 +490,30 @@
       </form>
       <form id="passwordForm">
         <h3>Change password</h3>
-        <label
-          >Current password<input
-            id="currentPassword"
-            type="password"
-            autocomplete="current-password"
-            required /></label
-        ><label
-          >New password<input
-            id="newPassword"
-            type="password"
-            autocomplete="new-password"
-            minlength="15"
-            maxlength="128"
-            required
-        /></label>
+        <div class="password-control">
+          <label for="currentPassword">Current password</label>
+          <div class="password-field">
+            <input
+              id="currentPassword"
+              type="password"
+              autocomplete="current-password"
+              required />
+            <button type="button" class="password-toggle" data-password-toggle="currentPassword" data-password-label="current password" aria-controls="currentPassword" aria-label="Show current password" aria-pressed="false">Show</button>
+          </div>
+        </div>
+        <div class="password-control">
+          <label for="newPassword">New password</label>
+          <div class="password-field">
+            <input
+              id="newPassword"
+              type="password"
+              autocomplete="new-password"
+              minlength="15"
+              maxlength="128"
+              required />
+            <button type="button" class="password-toggle" data-password-toggle="newPassword" data-password-label="new password" aria-controls="newPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+          </div>
+        </div>
         <p class="field-help">
           Use 15 to 128 characters. Changing your password signs out all
           sessions.

@@ -125,6 +125,26 @@ with pymupdf.open(pdf) as document:
                     tessdata=tessdata,
                 )
                 plain = page.get_text(textpage=recognized)
+                if 'ben' in language.split('+'):
+                    bengali_count = len(re.findall(r'[\u0980-\u09ff]', plain))
+                    if bengali_count >= 100:
+                        try:
+                            bengali_page = page.get_textpage_ocr(
+                                language='ben', dpi=150, full=True, tessdata=tessdata)
+                            bengali_text = page.get_text(textpage=bengali_page)
+                            bengali_only_count = len(re.findall(r'[\u0980-\u09ff]', bengali_text))
+                            mixed_latin = sum(len(re.findall(r'[A-Za-z]{3,}', line))
+                                              for line in plain.splitlines()
+                                              if len(re.findall(r'[\u0980-\u09ff]', line)) > 10)
+                            bengali_latin = sum(len(re.findall(r'[A-Za-z]{3,}', line))
+                                                for line in bengali_text.splitlines()
+                                                if len(re.findall(r'[\u0980-\u09ff]', line)) > 10)
+                            if (bengali_only_count >= bengali_count * 0.9 and
+                                    len(bengali_text.strip()) >= len(plain.strip()) * 0.6 and
+                                    (bengali_only_count > bengali_count or bengali_latin < mixed_latin)):
+                                plain = bengali_text
+                        except Exception:
+                            pass
                 if len(plain.strip()) < 40:
                     recovered = enhanced_ocr(page, language, tessdata)
                     if len(recovered.strip()) > len(plain.strip()):

@@ -1,3 +1,5 @@
+import { analyzeBengaliNotice, isBengaliNotice } from "./bengali-analysis.js";
+
 const EVENT_PATTERNS = [
   {
     category: "EXAM",
@@ -649,6 +651,7 @@ function titleFrom(heading, lead, topic, sentences, schedule) {
 }
 
 export function analyzeNoticeText(source) {
+  if (isBengaliNotice(source)) return analyzeBengaliNotice(source);
   const { heading, sentences, schedule } = segments(source);
   const table = tableFacts(schedule);
   const scheduledSubject = scheduleSubject(sentences);

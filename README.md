@@ -9,7 +9,7 @@ Notify is a university notice board for students, teachers, and administrators. 
 - **Teacher accounts:** Teachers register with their university details and can use teacher features after administrator approval.
 - **Department management:** Administrators manage departments, assign teachers to multiple departments, and appoint a head for each department. Department heads use their teacher accounts to manage notices for their own department.
 - **Notice publishing:** Authorized staff can prepare drafts, publish announcements for the appropriate audience, edit notices, and archive older posts. Administrators can also broadcast across the university.
-- **Document-based notices:** Staff can attach PDF, Word, or Excel files. For PDF and Word notices, Notify suggests a title and concise key details from the document, including text recovered from scanned pages. Staff can review and edit the wording before publishing.
+- **Document-based notices:** Staff can attach PDF, Word, or Excel files. For English and Bangla PDF or Word notices, Notify suggests a title and concise key details from the document, including text recovered from scanned pages. Staff can review and edit the wording before publishing.
 - **Document reading:** Readers can open attached documents within the web or Android app and download the original file. Android also includes an in-app PDF reader.
 - **Finding and sharing notices:** Search, categories, and department filters help readers find updates. Notice text can be copied or shared.
 

@@ -597,6 +597,7 @@ dialog h2 {
   margin-bottom: 22px;
 }
 form > label,
+.password-control,
 .form-row > label {
   display: flex;
   flex-direction: column;
@@ -604,6 +605,29 @@ form > label,
   margin: 15px 0;
   font-weight: 600;
   font-size: 12px;
+}
+.password-field {
+  position: relative;
+}
+.password-field input {
+  padding-right: 78px;
+}
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  transform: translateY(-50%);
+  min-width: 64px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 600;
+}
+.password-toggle:hover {
+  background: var(--soft);
 }
 form input,
 form select,

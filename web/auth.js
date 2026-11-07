@@ -2,7 +2,35 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   let recoveryToken = "";
+  function hidePasswords(root = document) {
+    root.querySelectorAll("[data-password-toggle]").forEach((button) => {
+      $(button.dataset.passwordToggle).type = "password";
+      button.textContent = "Show";
+      button.setAttribute("aria-pressed", "false");
+      button.setAttribute(
+        "aria-label",
+        `Show ${button.dataset.passwordLabel}`,
+      );
+    });
+  }
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const input = $(button.dataset.passwordToggle);
+      const visible = input.type === "password";
+      input.type = visible ? "text" : "password";
+      button.textContent = visible ? "Hide" : "Show";
+      button.setAttribute("aria-pressed", String(visible));
+      button.setAttribute(
+        "aria-label",
+        `${visible ? "Hide" : "Show"} ${button.dataset.passwordLabel}`,
+      );
+    });
+  });
+  document.querySelectorAll("form").forEach((form) => {
+    form.addEventListener("reset", () => hidePasswords(form));
+  });
   function showPanel(name) {
+    hidePasswords();
     document
       .querySelectorAll("[data-auth-panel]")
       .forEach((panel) => (panel.hidden = panel.dataset.authPanel !== name));
@@ -75,6 +103,7 @@
         },
       });
       $("staffPassword").value = "";
+      hidePasswords(event.target);
       signedIn();
     });
   };
@@ -95,6 +124,7 @@
         },
       });
       $("registerPassword").value = "";
+      hidePasswords(event.target);
       signedIn();
     });
   };
