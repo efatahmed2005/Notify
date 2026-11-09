@@ -1,7 +1,6 @@
 package com.example.notify.ui;
 
 import android.content.Intent;
-import android.view.WindowManager;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.notify.MainActivity;
 import com.example.notify.data.model.User;
@@ -21,7 +20,6 @@ public class SessionActivity extends AppCompatActivity {
       intent.putExtra("openAdministration", true);
       startActivity(intent);
     });
-    getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
     ApiClient.async(
       ApiClient::refreshSession,
       new ApiClient.Callback<User>() {

@@ -3,7 +3,11 @@ package com.example.notify.ui.details;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -39,10 +43,13 @@ public class DocumentPreviewActivity
   private MaterialButton btnPrevPage, btnNextPage;
 
   // Multi-page Continuous PDF Views
+  private HorizontalScrollView pdfPanContainer;
   private RecyclerView rvPdfPages;
   private ProgressBar pbLoadingPdf;
   private LinearLayoutManager pdfLayoutManager;
   private PdfPagesAdapter pdfPagesAdapter;
+  private ScaleGestureDetector pdfScaleDetector;
+  private float pdfZoom = 1f;
 
   // Fallback & Office Container Views
   private NestedScrollView nestedScrollFallback;
@@ -120,8 +127,50 @@ public class DocumentPreviewActivity
     btnNextPage = findViewById(R.id.btnNextPage);
 
     // Continuous PDF Views
+    pdfPanContainer = findViewById(R.id.pdfPanContainer);
     rvPdfPages = findViewById(R.id.rvPdfPages);
     pbLoadingPdf = findViewById(R.id.pbLoadingPdf);
+    pdfScaleDetector = new ScaleGestureDetector(this,
+      new ScaleGestureDetector.SimpleOnScaleGestureListener() {
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+          float next = Math.max(1f, Math.min(3f,
+            pdfZoom * detector.getScaleFactor()));
+          if (Math.abs(next - pdfZoom) < 0.001f) return true;
+          int oldScroll = pdfPanContainer.getScrollX();
+          float focusInViewport = Math.max(0f, Math.min(
+            pdfPanContainer.getWidth(), detector.getFocusX() - oldScroll));
+          float ratio = next / pdfZoom;
+          pdfZoom = next;
+          ViewGroup.LayoutParams params = rvPdfPages.getLayoutParams();
+          params.width = Math.round(pdfPanContainer.getWidth() * pdfZoom);
+          rvPdfPages.setLayoutParams(params);
+          pdfPanContainer.post(() -> pdfPanContainer.scrollTo(
+            Math.round((oldScroll + focusInViewport) * ratio - focusInViewport), 0));
+          return true;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+          pdfPanContainer.requestDisallowInterceptTouchEvent(false);
+        }
+      });
+    rvPdfPages.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+      @Override
+      public boolean onInterceptTouchEvent(@NonNull RecyclerView view,
+        @NonNull MotionEvent event) {
+        if (event.getPointerCount() > 1)
+          pdfPanContainer.requestDisallowInterceptTouchEvent(true);
+        pdfScaleDetector.onTouchEvent(event);
+        return pdfScaleDetector.isInProgress();
+      }
+
+      @Override
+      public void onTouchEvent(@NonNull RecyclerView view,
+        @NonNull MotionEvent event) {
+        pdfScaleDetector.onTouchEvent(event);
+      }
+    });
 
     // Fallback Container & Office Views
     nestedScrollFallback = findViewById(R.id.nestedScrollFallback);
@@ -306,6 +355,12 @@ public class DocumentPreviewActivity
       }
 
       // Show multi-page RecyclerView, hide single fallback containers
+      pdfZoom = 1f;
+      ViewGroup.LayoutParams pageParams = rvPdfPages.getLayoutParams();
+      pageParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+      rvPdfPages.setLayoutParams(pageParams);
+      pdfPanContainer.scrollTo(0, 0);
+      pdfPanContainer.setVisibility(View.VISIBLE);
       rvPdfPages.setVisibility(View.VISIBLE);
       nestedScrollFallback.setVisibility(View.GONE);
 
@@ -320,6 +375,7 @@ public class DocumentPreviewActivity
       btnNextPage.setEnabled(totalPdfPages > 1);
 
       // Dynamic page indicator tracker as user scrolls through pages
+      rvPdfPages.clearOnScrollListeners();
       rvPdfPages.addOnScrollListener(
         new RecyclerView.OnScrollListener() {
           @Override
@@ -355,6 +411,7 @@ public class DocumentPreviewActivity
   }
 
   private void showOfficeDocumentView(String docName, String docSize) {
+    pdfPanContainer.setVisibility(View.GONE);
     rvPdfPages.setVisibility(View.GONE);
     nestedScrollFallback.setVisibility(View.VISIBLE);
     cardDocumentPaper.setVisibility(View.GONE);

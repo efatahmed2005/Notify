@@ -70,7 +70,6 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle state) {
     super.onCreate(state);
     android.webkit.WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
-    getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE);
     LinearLayout layout = new LinearLayout(this);
     layout.setOrientation(LinearLayout.VERTICAL);
     layout.setFitsSystemWindows(true);
@@ -101,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
     setContentView(layout);
     portal.getSettings().setJavaScriptEnabled(true);
     portal.getSettings().setDomStorageEnabled(true);
+    portal.getSettings().setSupportZoom(true);
+    portal.getSettings().setBuiltInZoomControls(true);
+    portal.getSettings().setDisplayZoomControls(false);
     portal.getSettings().setAllowFileAccess(false);
     portal.getSettings().setAllowContentAccess(false);
     portal

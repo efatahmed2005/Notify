@@ -121,16 +121,24 @@
     </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Multi-Page Continuous PDF RecyclerView (Renders all pages smoothly) -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvPdfPages"
+    <HorizontalScrollView
+        android:id="@+id/pdfPanContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="32dp"
+        android:fillViewport="true"
+        android:scrollbars="horizontal"
         android:visibility="gone"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPdfPages"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingHorizontal="16dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="32dp" />
+    </HorizontalScrollView>
 
     <!-- Centered Loading Indicator -->
     <ProgressBar
